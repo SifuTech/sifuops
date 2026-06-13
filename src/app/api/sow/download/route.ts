@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     ...sections,
   })
 
-  const output = doc.getZip().generate({ type: 'nodebuffer' })
+  const output = new Uint8Array(doc.getZip().generate({ type: 'nodebuffer' }))
   const filename = `${input.project_title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-sow.docx`
 
   return new Response(output, {
