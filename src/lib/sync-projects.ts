@@ -5,6 +5,7 @@ export async function syncProjects(): Promise<number> {
   const boards = await listBoards()
 
   const matches = boards.flatMap((board) => {
+    if (board.name.toLowerCase().includes('template')) return []
     const group = board.groups.find((g) =>
       g.title.toLowerCase().includes('lessons learnt'),
     )

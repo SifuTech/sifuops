@@ -1,16 +1,26 @@
 const MONDAY_API = 'https://api.monday.com/v2'
 
+function getApiKey(): string {
+  const key = process.env.MONDAY_API_KEY
+  if (!key) throw new Error('MONDAY_API_KEY is not set')
+  return key
+}
+
 async function query<T>(gql: string, variables?: Record<string, unknown>): Promise<T> {
   const res = await fetch(MONDAY_API, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: process.env.MONDAY_API_KEY!,
+      Authorization: getApiKey(),
+      'API-Version': '2024-01',
     },
     body: JSON.stringify({ query: gql, variables }),
   })
   const json = await res.json()
-  if (json.errors?.length) throw new Error(json.errors[0].message)
+  if (json.errors?.length) {
+    const msg = typeof json.errors[0] === 'string' ? json.errors[0] : json.errors[0].message
+    throw new Error(msg)
+  }
   return json.data as T
 }
 
