@@ -17,3 +17,17 @@ export async function ensureTable() {
     )
   `
 }
+
+export async function ensureLessonsTable() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS lessons_learnt (
+      id           SERIAL PRIMARY KEY,
+      board_id     TEXT NOT NULL,
+      board_name   TEXT NOT NULL,
+      item_id      TEXT NOT NULL UNIQUE,
+      item_name    TEXT NOT NULL,
+      last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+}

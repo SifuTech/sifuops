@@ -1,7 +1,7 @@
 import { sql } from './db'
-import { listBoards } from './monday'
+import { listBoards, type Board } from './monday'
 
-export async function syncProjects(): Promise<number> {
+export async function syncProjects(): Promise<Board[]> {
   const boards = await listBoards()
 
   const projectBoards = boards.filter((board) => {
@@ -32,5 +32,5 @@ export async function syncProjects(): Promise<number> {
     `
   }
 
-  return projectBoards.length
+  return projectBoards
 }

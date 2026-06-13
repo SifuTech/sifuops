@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server'
-import { sql, ensureTable } from '@/lib/db'
+import { ensureTable, ensureLessonsTable } from '@/lib/db'
 import { syncProjects } from '@/lib/sync-projects'
-import { getGroupItems } from '@/lib/monday'
+import { syncLessons } from '@/lib/sync-lessons'
+import { getBoardWorkItems } from '@/lib/monday'
+import { generateBriefing } from '@/lib/briefing-agent'
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -15,28 +17,20 @@ export async function GET(request: NextRequest) {
   }
 
   await ensureTable()
-  await syncProjects()
+  await ensureLessonsTable()
 
-  const projects = await sql`
-    SELECT board_id, board_name, group_id, group_name
-    FROM projects
-    WHERE active = true
-    ORDER BY board_name
-  `
+  const projectBoards = await syncProjects()
+  await syncLessons()
 
-  const lines: string[] = ['Good morning! ☀️']
+  const projectWorkData = await Promise.all(
+    projectBoards.map(async (board) => ({
+      boardName: board.name,
+      items: await getBoardWorkItems(board.id, board.groups),
+    })),
+  )
 
-  for (const project of projects) {
-    if (!project.group_id) continue
-    const items = await getGroupItems(project.board_id, project.group_id)
-    if (items.length === 0) continue
-    lines.push(`\n**${project.board_name}**`)
-    for (const item of items) {
-      lines.push(`• ${item.name}`)
-    }
-  }
-
-  const content = lines.join('\n').slice(0, 2000)
+  const maskNames = request.nextUrl.searchParams.get('maskNames') === '1'
+  const content = (await generateBriefing(projectWorkData, { maskNames })).slice(0, 2000)
 
   const res = await fetch(webhookUrl, {
     method: 'POST',
@@ -48,5 +42,5 @@ export async function GET(request: NextRequest) {
     return new Response(`Discord error: ${res.status}`, { status: 502 })
   }
 
-  return Response.json({ ok: true, projects: projects.length })
+  return Response.json({ ok: true, projects: projectBoards.length })
 }
