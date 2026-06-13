@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
   const lines: string[] = ['Good morning! ☀️']
 
   for (const project of projects) {
+    if (!project.group_id) continue
     const items = await getGroupItems(project.board_id, project.group_id)
     if (items.length === 0) continue
     lines.push(`\n**${project.board_name}**`)
