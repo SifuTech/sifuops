@@ -31,10 +31,13 @@ function formatItems(items: WorkItem[]): string {
   return items
     .map((item) => {
       const meta: string[] = []
+      if (item.owner) meta.push(`👤 ${item.owner}`)
+      if (item.status) meta.push(`${item.status}`)
+      if (item.priority !== 'Low') meta.push(`${item.priority}`)
       if (item.targetDate) meta.push(`Target: ${item.targetDate}`)
       else if (item.plannedDate) meta.push(`Planned: ${item.plannedDate}`)
       if (item.effort) meta.push(`${item.effort}h`)
-      const suffix = meta.length ? ` (${meta.join(', ')})` : ''
+      const suffix = meta.length ? ` (${meta.join(' · ')})` : ''
       const main = `• [${item.group}] ${item.name}${suffix}`
       const subs = item.subitems.map((s) => `  ↳ ${s}`).join('\n')
       return subs ? `${main}\n${subs}` : main

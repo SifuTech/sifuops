@@ -12,9 +12,10 @@ async function query<T>(gql: string, variables?: Record<string, unknown>): Promi
     headers: {
       'Content-Type': 'application/json',
       Authorization: getApiKey(),
-      'API-Version': '2024-01',
+      'API-Version': '2026-01',
     },
     body: JSON.stringify({ query: gql, variables }),
+    cache: 'no-store',
   })
   const json = await res.json()
   if (json.errors?.length) {
@@ -60,35 +61,68 @@ export async function getGroupItems(boardId: string, groupId: string): Promise<I
   return data.boards[0]?.groups[0]?.items_page?.items ?? []
 }
 
-const WORK_GROUP_TITLES = [
-  'pre-sales/technical discovery',
-  'discovery / scoping',
-  'build',
-  'development',
-  'testing',
-  'handhold/prepare for go live',
+// Phase group aliases — matches the group names used across FastDox project boards
+const WORK_GROUP_ALIASES: string[][] = [
+  ['pre-sales/technical discovery', 'pre-sales', 'technical discovery', 'pre sales'],
+  ['discovery / scoping', 'discovery', 'scoping', 'estimation & planning'],
+  ['build', 'build / demo / refine', 'demo', 'refine', 'development'],
+  ['test', 'testing', 'uat', 'internal testing', 'user acceptance testing'],
+  ['handhold', 'handhold/prepare for go live', 'prepare for go live', 'go live', 'post go-live', 'closure'],
 ]
+
+function isWorkGroup(title: string): boolean {
+  const t = title.toLowerCase()
+  return WORK_GROUP_ALIASES.some((aliases) => aliases.some((a) => t.includes(a)))
+}
+
+export type Priority = 'P1' | 'High' | 'Medium' | 'Low'
+
+export function normalizePriority(value: string | null | undefined): Priority {
+  const t = value?.trim().toLowerCase() ?? ''
+  if (t === 'p1' || t.startsWith('critical')) return 'P1'
+  if (t.startsWith('high')) return 'High'
+  if (t.startsWith('medium')) return 'Medium'
+  return 'Low'
+}
+
+export function isCompletedStatus(status: string | null | undefined): boolean {
+  const t = status?.trim().toLowerCase() ?? ''
+  return t === 'done' || t === 'complete' || t === 'completed'
+}
+
+export function parseHours(value: string | null | undefined): number {
+  if (!value) return 0
+  const n = Number(value.trim())
+  return Number.isFinite(n) ? n : 0
+}
 
 export type WorkItem = {
   id: string
   name: string
   group: string
+  owner: string | null
+  status: string | null
+  priority: Priority
   targetDate: string | null
   plannedDate: string | null
   effort: string | null
   subitems: string[]
 }
 
+type RawColumnValue = {
+  text: string | null
+  column: { title: string | null } | null
+}
+
 type RawItem = {
   id: string
   name: string
-  column_values: { id: string; text: string }[]
+  column_values: RawColumnValue[]
   subitems: { id: string; name: string }[]
 }
 
 type RawWorkData = {
   boards: {
-    columns: { id: string; title: string }[]
     groups: {
       title: string
       items_page: { items: RawItem[] }
@@ -96,18 +130,19 @@ type RawWorkData = {
   }[]
 }
 
-function findCol(map: Map<string, string>, keys: string[]): string | null {
+function getColText(columnValues: RawColumnValue[], ...keys: string[]): string | null {
   for (const key of keys) {
-    const val = map.get(key)
+    const match = columnValues.find(
+      (cv) => cv.column?.title?.trim().toLowerCase() === key.toLowerCase(),
+    )
+    const val = match?.text?.trim()
     if (val) return val
   }
   return null
 }
 
 export async function getBoardWorkItems(boardId: string, boardGroups: Group[]): Promise<WorkItem[]> {
-  const workGroups = boardGroups.filter((g) =>
-    WORK_GROUP_TITLES.includes(g.title.toLowerCase()),
-  )
+  const workGroups = boardGroups.filter((g) => isWorkGroup(g.title))
   if (workGroups.length === 0) return []
 
   const groupIds = workGroups.map((g) => g.id)
@@ -116,14 +151,16 @@ export async function getBoardWorkItems(boardId: string, boardGroups: Group[]): 
     `
     query($boardId: ID!, $groupIds: [String!]!) {
       boards(ids: [$boardId]) {
-        columns { id title }
         groups(ids: $groupIds) {
           title
           items_page(limit: 100) {
             items {
               id
               name
-              column_values { id text }
+              column_values {
+                text
+                column { title }
+              }
               subitems { id name }
             }
           }
@@ -134,28 +171,22 @@ export async function getBoardWorkItems(boardId: string, boardGroups: Group[]): 
     { boardId, groupIds },
   )
 
-  const board = data.boards[0]
-  if (!board) return []
-
-  // Build columnId → lowercase title map from board column definitions
-  const colTitles = new Map(board.columns.map((c) => [c.id, c.title.toLowerCase()]))
-
   const items: WorkItem[] = []
 
-  for (const group of board.groups) {
+  for (const group of data.boards[0]?.groups ?? []) {
     for (const raw of group.items_page.items) {
-      // Map column title → text value for this item
-      const colMap = new Map(
-        raw.column_values.map((cv) => [colTitles.get(cv.id) ?? cv.id, cv.text]),
-      )
+      const cv = raw.column_values
 
       items.push({
         id: raw.id,
         name: raw.name,
         group: group.title,
-        targetDate: findCol(colMap, ['target date', 'target']),
-        plannedDate: findCol(colMap, ['planned date', 'planned', 'plan date']),
-        effort: findCol(colMap, ['effort', 'hours', 'estimated hours']),
+        owner: getColText(cv, 'owner', 'assigned to', 'assignee', 'person'),
+        status: getColText(cv, 'status'),
+        priority: normalizePriority(getColText(cv, 'priority')),
+        targetDate: getColText(cv, 'target date', 'target'),
+        plannedDate: getColText(cv, 'planned date', 'planned', 'plan date'),
+        effort: getColText(cv, 'effort', 'hours', 'estimated hours'),
         subitems: raw.subitems.slice(0, 5).map((s) => s.name),
       })
     }
