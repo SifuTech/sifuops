@@ -34,7 +34,7 @@ export async function createSessionToken(username: string): Promise<string> {
     new TextEncoder().encode(JSON.stringify({ u: username, exp: Date.now() + SESSION_DURATION_MS })),
   )
   const key = await getKey()
-  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)))
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)) as ArrayBuffer)
   return `${payload}.${toBase64url(sig)}`
 }
 
@@ -45,7 +45,7 @@ export async function verifySessionToken(token: string): Promise<{ username: str
     const payload = token.slice(0, dot)
     const sig = fromBase64url(token.slice(dot + 1))
     const key = await getKey()
-    const valid = await crypto.subtle.verify('HMAC', key, sig, new TextEncoder().encode(payload))
+    const valid = await crypto.subtle.verify('HMAC', key, sig.buffer as ArrayBuffer, new TextEncoder().encode(payload).buffer as ArrayBuffer)
     if (!valid) return null
     const data = JSON.parse(new TextDecoder().decode(fromBase64url(payload))) as { u: string; exp: number }
     if (data.exp < Date.now()) return null
