@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   await ensureTable()
   await syncProjects()
 
-  const { rows: projects } = await sql`
+  const projects = await sql`
     SELECT board_id, board_name, group_id, group_name
     FROM projects
     WHERE active = true
