@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
-import { ensureTable, ensureLessonsTable } from '@/lib/db'
+import { ensureTable, ensureLessonsTable, ensureWorkItemsTable } from '@/lib/db'
 import { syncProjects } from '@/lib/sync-projects'
 import { syncLessons } from '@/lib/sync-lessons'
+import { syncWorkItems } from '@/lib/sync-work-items'
 import { getBoardWorkItems } from '@/lib/monday'
 import { generateBriefing } from '@/lib/briefing-agent'
 
@@ -18,9 +19,11 @@ export async function GET(request: NextRequest) {
 
   await ensureTable()
   await ensureLessonsTable()
+  await ensureWorkItemsTable()
 
   const projectBoards = await syncProjects()
   await syncLessons()
+  await syncWorkItems(projectBoards)
 
   const projectWorkData = await Promise.all(
     projectBoards.map(async (board) => ({

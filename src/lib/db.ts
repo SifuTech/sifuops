@@ -31,3 +31,26 @@ export async function ensureLessonsTable() {
     )
   `
 }
+
+export async function ensureWorkItemsTable() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS monday_work_items (
+      item_id      TEXT PRIMARY KEY,
+      board_id     TEXT NOT NULL,
+      board_name   TEXT,
+      group_name   TEXT,
+      phase_key    TEXT,
+      name         TEXT NOT NULL,
+      owner        TEXT,
+      status       TEXT,
+      priority     TEXT NOT NULL DEFAULT 'Low',
+      target_date  TEXT,
+      planned_date TEXT,
+      effort       TEXT,
+      synced_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+  await sql`CREATE INDEX IF NOT EXISTS monday_work_items_board_id ON monday_work_items (board_id)`
+  await sql`CREATE INDEX IF NOT EXISTS monday_work_items_owner ON monday_work_items (owner)`
+  await sql`CREATE INDEX IF NOT EXISTS monday_work_items_phase_key ON monday_work_items (phase_key)`
+}

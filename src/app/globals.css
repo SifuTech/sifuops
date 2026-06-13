@@ -1,26 +1,109 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #140f24;
+  --foreground: #eee8ff;
+  --foreground-strong: #ffffff;
+  --muted: #cbd5e1;
+  --subtle: #94a3b8;
+  --panel: rgba(26, 19, 46, 0.78);
+  --header: rgba(20, 15, 36, 0.72);
+  --border: rgba(148, 163, 184, 0.18);
+  --hover: rgba(255, 255, 255, 0.05);
+  --shadow: 0 18px 60px -24px rgba(12, 10, 25, 0.9);
+  --sidebar-panel: rgba(26, 19, 46, 0.78);
+  --sidebar-foreground: #eee8ff;
+  --sidebar-muted: #cbd5e1;
+  --sidebar-subtle: #94a3b8;
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(34, 197, 94, 0.06));
+  --sidebar-active-border: rgba(52, 211, 153, 0.3);
+  --sidebar-divider: rgba(255, 255, 255, 0.1);
+  --accent-pill-bg: rgba(16, 185, 129, 0.12);
+  --accent-pill-border: rgba(52, 211, 153, 0.28);
+  --accent-pill-text: #d1fae5;
+  --primary-button-bg: #34d399;
+  --primary-button-bg-hover: #6ee7b7;
+  --primary-button-text: #020617;
+  --divider: rgba(99, 102, 241, 0.28);
+
+  /* Timeline phase states */
+  --timeline-phase-active-border: rgba(56, 189, 248, 0.32);
+  --timeline-phase-active-bg: rgba(56, 189, 248, 0.08);
+  --timeline-phase-active-text: #bae6fd;
+  --timeline-phase-overdue-border: rgba(248, 113, 113, 0.32);
+  --timeline-phase-overdue-bg: rgba(248, 113, 113, 0.08);
+  --timeline-phase-overdue-bar: linear-gradient(90deg, rgba(248,113,113,0.9), rgba(239,68,68,0.85));
+  --timeline-phase-overdue-track: rgba(239, 68, 68, 0.12);
+  --timeline-phase-overdue-text: #fca5a5;
+  --timeline-phase-text: #94a3b8;
+  --timeline-phase-muted-text: #64748b;
+  --timeline-section-toggle-border: rgba(148, 163, 184, 0.18);
+  --timeline-section-toggle-bg: rgba(255, 255, 255, 0.04);
+  --timeline-section-toggle-text: #94a3b8;
+  --accent-soft: rgba(52, 211, 153, 0.12);
+  --accent-border: rgba(52, 211, 153, 0.28);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, sans-serif;
+}
+
+.app-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.app-heading { color: var(--foreground-strong); }
+.app-muted   { color: var(--muted); }
+.app-subtle  { color: var(--subtle); }
+
+.app-header {
+  background: var(--header);
+  border-color: var(--border);
+}
+
+.app-sidebar {
+  background: var(--sidebar-panel);
+  border-right: 1px solid var(--sidebar-divider);
+}
+
+.app-nav-link { color: var(--sidebar-muted); }
+.app-nav-link:hover {
+  background: var(--sidebar-hover);
+  color: var(--sidebar-foreground);
+}
+.app-nav-link-active {
+  background: var(--sidebar-active);
+  border: 1px solid var(--sidebar-active-border);
+  color: var(--sidebar-foreground);
+}
+.app-nav-rail { border-left: 1px solid var(--sidebar-divider); }
+.app-subnav-link { color: var(--sidebar-subtle); }
+.app-subnav-link:hover { color: var(--sidebar-foreground); }
+.app-subnav-link-active { color: #6ee7b7; font-weight: 500; }
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--accent-pill-border);
+  background: var(--accent-pill-bg);
+  color: var(--accent-pill-text);
+}
+
+.app-panel {
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  border: 1px solid var(--border);
 }
