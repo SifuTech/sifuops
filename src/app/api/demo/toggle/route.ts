@@ -4,7 +4,7 @@ import { DEMO_COOKIE } from '@/lib/demo'
 export async function POST(req: NextRequest) {
   const isDemo = req.cookies.get(DEMO_COOKIE)?.value === '1'
   const referer = req.headers.get('referer') ?? '/'
-  const res = NextResponse.redirect(new URL(referer))
+  const res = NextResponse.redirect(new URL(referer), { status: 303 })
 
   if (isDemo) {
     res.cookies.delete(DEMO_COOKIE)

@@ -32,40 +32,53 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
       </div>
 
       {/* Demo toggle — bottom right */}
-      <div className="absolute bottom-4 right-4 flex items-center gap-2">
-        <span className="text-xs" style={{ color: demoMode ? 'rgb(251,191,36)' : 'var(--subtle)', opacity: demoMode ? 1 : 0.5 }}>
-          Demo
-        </span>
+      <div className="absolute bottom-5 right-5">
         <form action="/api/demo/toggle" method="POST">
           <button
             type="submit"
             aria-label="Toggle demo mode"
             style={{
-              position: 'relative',
-              display: 'inline-block',
-              width: '2rem',
-              height: '1.125rem',
-              background: demoMode ? 'rgba(251,191,36,0.7)' : 'rgba(148,163,184,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: demoMode ? 'rgba(251,191,36,0.12)' : 'rgba(148,163,184,0.08)',
+              border: `1px solid ${demoMode ? 'rgba(251,191,36,0.4)' : 'rgba(148,163,184,0.2)'}`,
               borderRadius: '9999px',
-              border: 'none',
+              padding: '0.3rem 0.75rem 0.3rem 0.5rem',
               cursor: 'pointer',
-              transition: 'background 0.2s',
-              padding: 0,
+              transition: 'all 0.2s',
             }}
           >
-            <span
-              style={{
+            {/* Track */}
+            <span style={{ position: 'relative', display: 'inline-block', width: '2.25rem', height: '1.25rem', flexShrink: 0 }}>
+              <span style={{
                 position: 'absolute',
-                top: '2px',
-                left: demoMode ? 'calc(100% - 18px)' : '2px',
+                inset: 0,
+                background: demoMode ? 'rgba(251,191,36,0.8)' : 'rgba(148,163,184,0.25)',
+                borderRadius: '9999px',
+                transition: 'background 0.2s',
+              }} />
+              <span style={{
+                position: 'absolute',
+                top: '3px',
+                left: demoMode ? '17px' : '3px',
                 width: '14px',
                 height: '14px',
-                background: demoMode ? 'rgb(251,191,36)' : 'rgba(148,163,184,0.6)',
+                background: demoMode ? 'rgb(251,191,36)' : 'rgb(148,163,184)',
                 borderRadius: '50%',
                 transition: 'left 0.2s',
-                display: 'block',
-              }}
-            />
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+              }} />
+            </span>
+            <span style={{
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              letterSpacing: '0.05em',
+              color: demoMode ? 'rgb(251,191,36)' : 'rgb(148,163,184)',
+              transition: 'color 0.2s',
+            }}>
+              DEMO
+            </span>
           </button>
         </form>
       </div>
