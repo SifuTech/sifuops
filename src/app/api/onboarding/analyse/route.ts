@@ -86,25 +86,39 @@ async function readSystemPrompt(agent: Agent): Promise<string> {
   return fs.readFile(filePath, 'utf-8')
 }
 
-async function loadReferenceDocs(): Promise<string> {
+async function loadReferenceDocs(selectedModules: string[]): Promise<string> {
   const docsDir = path.join(process.cwd(), 'agents', 'docs')
-  let files: string[]
+  const parts: string[] = []
+
+  // Always include full delivery methodology
   try {
-    files = (await fs.readdir(docsDir))
-      .filter((f) => f.endsWith('.md'))
-      .sort()
-  } catch {
-    return ''
-  }
+    const content = await fs.readFile(path.join(docsDir, 'delivery-methodology.md'), 'utf-8')
+    if (content.trim()) parts.push(content.trim())
+  } catch { /* skip if missing */ }
 
-  const sections = await Promise.all(
-    files.map(async (file) => {
-      const content = await fs.readFile(path.join(docsDir, file), 'utf-8')
-      return content.trim()
-    }),
-  )
+  // Include only the modules selected for this project
+  try {
+    const content = await fs.readFile(path.join(docsDir, 'module-documentation.md'), 'utf-8')
+    const selected = selectedModules.map((m) => m.toLowerCase())
+    const useAll = selected.length === 0
 
-  return sections.filter(Boolean).join('\n\n---\n\n')
+    const filtered = content
+      .split(/\n---\n/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((section) => {
+        if (useAll) return true
+        if (section.startsWith('# Module Documentation')) return true
+        const match = section.match(/^## \d+\.\s+(.+)/)
+        if (!match) return true
+        const sectionName = match[1].toLowerCase()
+        return selected.some((m) => sectionName.includes(m))
+      })
+
+    if (filtered.length > 0) parts.push(filtered.join('\n\n---\n\n'))
+  } catch { /* skip if missing */ }
+
+  return parts.join('\n\n---\n\n')
 }
 
 async function runAgent(
@@ -114,13 +128,8 @@ async function runAgent(
 ): Promise<{ output: AgentOutput; usage: Anthropic.Usage }> {
   const systemPrompt = await readSystemPrompt(agent)
 
-  const systemBlocks: Anthropic.TextBlockParam[] = [
-    {
-      type: 'text',
-      text: systemPrompt,
-      cache_control: { type: 'ephemeral' },
-    },
-  ]
+  // Reference docs first — identical across all agents so sequential runs share the cache
+  const systemBlocks: Anthropic.TextBlockParam[] = []
 
   if (referenceDocs) {
     systemBlocks.push({
@@ -129,6 +138,13 @@ async function runAgent(
       cache_control: { type: 'ephemeral' },
     })
   }
+
+  // Agent-specific prompt second
+  systemBlocks.push({
+    type: 'text',
+    text: systemPrompt,
+    cache_control: { type: 'ephemeral' },
+  })
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
@@ -171,15 +187,14 @@ export async function POST(req: NextRequest) {
 
     const [userPrompt, referenceDocs] = await Promise.all([
       Promise.resolve(buildUserPrompt(projectInput, lessons ?? [])),
-      loadReferenceDocs(),
+      loadReferenceDocs(projectInput.modules ?? []),
     ])
 
-    const [baResult, poResult, devResult, qaResult] = await Promise.all([
-      runAgent('ba', userPrompt, referenceDocs),
-      runAgent('po', userPrompt, referenceDocs),
-      runAgent('dev', userPrompt, referenceDocs),
-      runAgent('qa', userPrompt, referenceDocs),
-    ])
+    // Sequential so each agent after the first gets a cache hit on the shared reference docs block
+    const baResult = await runAgent('ba', userPrompt, referenceDocs)
+    const poResult = await runAgent('po', userPrompt, referenceDocs)
+    const devResult = await runAgent('dev', userPrompt, referenceDocs)
+    const qaResult = await runAgent('qa', userPrompt, referenceDocs)
 
     const totalInput = baResult.usage.input_tokens + poResult.usage.input_tokens + devResult.usage.input_tokens + qaResult.usage.input_tokens
     const totalOutput = baResult.usage.output_tokens + poResult.usage.output_tokens + devResult.usage.output_tokens + qaResult.usage.output_tokens
