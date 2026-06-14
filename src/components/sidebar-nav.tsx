@@ -10,8 +10,9 @@ export type NavItem = {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/', label: 'Delivery Control', icon: '◈' },
-  { href: '/sow', label: 'SOW Generator', icon: '◻' },
+  { href: '/new-project', label: 'New Project', icon: '✦' },
+  { href: '/', label: 'Delivery Control', icon: '⊞' },
+  { href: '/sow', label: 'SOW Generator', icon: '≡' },
 ]
 
 export function SidebarNav() {

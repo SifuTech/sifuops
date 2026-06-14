@@ -28,6 +28,45 @@ async function query<T>(gql: string, variables?: Record<string, unknown>): Promi
 export type Group = { id: string; title: string }
 export type Board = { id: string; name: string; groups: Group[] }
 
+export async function getBoardGroups(boardId: string): Promise<Group[]> {
+  const data = await query<{ boards: { groups: Group[] }[] }>(
+    `query($boardId: ID!) {
+      boards(ids: [$boardId]) {
+        groups { id title }
+      }
+    }`,
+    { boardId },
+  )
+  return data.boards[0]?.groups ?? []
+}
+
+export async function createItem(
+  boardId: string,
+  groupId: string,
+  name: string,
+): Promise<string> {
+  const data = await query<{ create_item: { id: string } }>(
+    `mutation($boardId: ID!, $groupId: String!, $name: String!) {
+      create_item(board_id: $boardId, group_id: $groupId, item_name: $name) {
+        id
+      }
+    }`,
+    { boardId, groupId, name },
+  )
+  return data.create_item.id
+}
+
+export async function addItemUpdate(itemId: string, body: string): Promise<void> {
+  await query(
+    `mutation($itemId: ID!, $body: String!) {
+      create_update(item_id: $itemId, body: $body) {
+        id
+      }
+    }`,
+    { itemId, body },
+  )
+}
+
 export async function listBoards(): Promise<Board[]> {
   const data = await query<{ boards: Board[] }>(`
     query {
