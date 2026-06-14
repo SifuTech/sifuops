@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { verifySessionToken, COOKIE_NAME } from '@/lib/auth'
+import { DEMO_COOKIE } from '@/lib/demo'
 import PasswordInput from './PasswordInput'
 import { ThemeToggle } from '@/components/theme-toggle'
 
@@ -19,6 +20,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
   }
 
   const hasError = error === '1'
+  const demoMode = cookieStore.get(DEMO_COOKIE)?.value === '1'
 
   return (
     <div
@@ -29,15 +31,41 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
         <ThemeToggle />
       </div>
 
-      {/* Demo link — bottom right */}
-      <div className="absolute bottom-4 right-4 text-right">
-        <form action="/api/demo/login" method="POST">
+      {/* Demo toggle — bottom right */}
+      <div className="absolute bottom-4 right-4 flex items-center gap-2">
+        <span className="text-xs" style={{ color: demoMode ? 'rgb(251,191,36)' : 'var(--subtle)', opacity: demoMode ? 1 : 0.5 }}>
+          Demo
+        </span>
+        <form action="/api/demo/toggle" method="POST">
           <button
             type="submit"
-            className="text-xs transition hover:opacity-80"
-            style={{ color: 'rgba(251,191,36,0.5)', background: 'none', border: 'none', cursor: 'pointer' }}
+            aria-label="Toggle demo mode"
+            style={{
+              position: 'relative',
+              display: 'inline-block',
+              width: '2rem',
+              height: '1.125rem',
+              background: demoMode ? 'rgba(251,191,36,0.7)' : 'rgba(148,163,184,0.2)',
+              borderRadius: '9999px',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'background 0.2s',
+              padding: 0,
+            }}
           >
-            Try Demo →
+            <span
+              style={{
+                position: 'absolute',
+                top: '2px',
+                left: demoMode ? 'calc(100% - 18px)' : '2px',
+                width: '14px',
+                height: '14px',
+                background: demoMode ? 'rgb(251,191,36)' : 'rgba(148,163,184,0.6)',
+                borderRadius: '50%',
+                transition: 'left 0.2s',
+                display: 'block',
+              }}
+            />
           </button>
         </form>
       </div>
@@ -154,6 +182,21 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
             </button>
           </form>
 
+          {demoMode && (
+            <form action="/api/demo/login" method="POST" className="mt-3">
+              <button
+                type="submit"
+                className="w-full rounded-xl px-4 py-3 text-sm font-semibold transition hover:opacity-90 active:opacity-80"
+                style={{
+                  background: 'rgba(251,191,36,0.12)',
+                  border: '1px solid rgba(251,191,36,0.35)',
+                  color: 'rgb(251,191,36)',
+                }}
+              >
+                Enter Demo →
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </div>
