@@ -111,7 +111,7 @@ async function runAgent(
   agent: Agent,
   userPrompt: string,
   referenceDocs: string,
-): Promise<AgentOutput> {
+): Promise<{ output: AgentOutput; usage: Anthropic.Usage }> {
   const systemPrompt = await readSystemPrompt(agent)
 
   const systemBlocks: Anthropic.TextBlockParam[] = [
@@ -149,13 +149,12 @@ async function runAgent(
 
   const parsed = JSON.parse(jsonMatch[0]) as AgentOutput
 
-  // Ensure agent field is correct on all suggested tasks
   parsed.suggested_tasks = (parsed.suggested_tasks ?? []).map((t) => ({
     ...t,
     agent: AGENT_LABELS[agent],
   }))
 
-  return parsed
+  return { output: parsed, usage: message.usage }
 }
 
 export async function POST(req: NextRequest) {
@@ -175,14 +174,28 @@ export async function POST(req: NextRequest) {
       loadReferenceDocs(),
     ])
 
-    const [ba, po, dev, qa] = await Promise.all([
+    const [baResult, poResult, devResult, qaResult] = await Promise.all([
       runAgent('ba', userPrompt, referenceDocs),
       runAgent('po', userPrompt, referenceDocs),
       runAgent('dev', userPrompt, referenceDocs),
       runAgent('qa', userPrompt, referenceDocs),
     ])
 
-    const result: AnalyseResponse = { ba, po, dev, qa }
+    const totalInput = baResult.usage.input_tokens + poResult.usage.input_tokens + devResult.usage.input_tokens + qaResult.usage.input_tokens
+    const totalOutput = baResult.usage.output_tokens + poResult.usage.output_tokens + devResult.usage.output_tokens + qaResult.usage.output_tokens
+    const cacheUsage = (u: Anthropic.Usage) => u as unknown as { cache_read_input_tokens?: number; cache_creation_input_tokens?: number }
+    const totalCacheRead = (cacheUsage(baResult.usage).cache_read_input_tokens ?? 0) + (cacheUsage(poResult.usage).cache_read_input_tokens ?? 0) + (cacheUsage(devResult.usage).cache_read_input_tokens ?? 0) + (cacheUsage(qaResult.usage).cache_read_input_tokens ?? 0)
+    const totalCacheWrite = (cacheUsage(baResult.usage).cache_creation_input_tokens ?? 0) + (cacheUsage(poResult.usage).cache_creation_input_tokens ?? 0) + (cacheUsage(devResult.usage).cache_creation_input_tokens ?? 0) + (cacheUsage(qaResult.usage).cache_creation_input_tokens ?? 0)
+
+    console.log(`[onboarding/analyse] token usage — input: ${totalInput}, output: ${totalOutput}, cache_read: ${totalCacheRead}, cache_write: ${totalCacheWrite}, total: ${totalInput + totalOutput}`)
+    console.log(`[onboarding/analyse] per-agent — ba: ${baResult.usage.input_tokens}+${baResult.usage.output_tokens}, po: ${poResult.usage.input_tokens}+${poResult.usage.output_tokens}, dev: ${devResult.usage.input_tokens}+${devResult.usage.output_tokens}, qa: ${qaResult.usage.input_tokens}+${qaResult.usage.output_tokens}`)
+
+    const result: AnalyseResponse = {
+      ba: baResult.output,
+      po: poResult.output,
+      dev: devResult.output,
+      qa: qaResult.output,
+    }
     return NextResponse.json(result)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
