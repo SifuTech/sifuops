@@ -14,6 +14,28 @@ const SECTION_LABELS: Record<keyof SowSections, string> = {
   training: 'Training',
 }
 
+const fieldStyle: React.CSSProperties = {
+  width: '100%',
+  background: 'rgba(0,0,0,0.25)',
+  border: '1px solid rgba(148,163,184,0.18)',
+  borderRadius: '0.75rem',
+  padding: '0.625rem 0.875rem',
+  fontSize: '0.875rem',
+  color: 'var(--foreground)',
+  outline: 'none',
+  transition: 'border-color 0.15s',
+}
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  letterSpacing: '0.05em',
+  textTransform: 'uppercase',
+  color: 'var(--subtle)',
+  marginBottom: '0.375rem',
+}
+
 export default function SowPage() {
   const [input, setInput] = useState<SowInput>({
     project_title: '',
@@ -74,103 +96,140 @@ export default function SowPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Statement of Work Generator</h1>
-        <p className="text-gray-500 mb-8">Enter project details and Claude will draft the SOW for review.</p>
+    <div className="max-w-3xl mx-auto">
+      {/* Page header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <span style={{ fontSize: '1.25rem', color: 'var(--primary-button-bg)' }}>≡</span>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--foreground-strong)' }}>
+            SOW Generator
+          </h1>
+        </div>
+        <p style={{ color: 'var(--subtle)', fontSize: '0.875rem' }}>
+          Enter project details and Claude will draft the Statement of Works for review and download.
+        </p>
+      </div>
 
-        <form onSubmit={handleGenerate} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5 mb-8">
+      {/* Input form */}
+      <form onSubmit={handleGenerate}>
+        <div className="app-panel rounded-2xl p-6 space-y-5 mb-6" style={{ boxShadow: 'var(--shadow)' }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Title</label>
+            <label style={labelStyle}>Project Title</label>
             <input
               type="text"
               required
               value={input.project_title}
               onChange={(e) => setInput((p) => ({ ...p, project_title: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g. FDX Player Portal v2"
+              placeholder="e.g. Sterling Claims Management — Campaigns Module"
+              style={fieldStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(52,211,153,0.5)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(148,163,184,0.18)')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Manager</label>
+            <label style={labelStyle}>Project Manager</label>
             <input
               type="text"
               required
               value={input.project_manager}
               onChange={(e) => setInput((p) => ({ ...p, project_manager: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Your name"
+              style={fieldStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(52,211,153,0.5)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(148,163,184,0.18)')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Overview</label>
+            <label style={labelStyle}>Project Overview</label>
             <textarea
               required
               rows={5}
               value={input.project_overview}
               onChange={(e) => setInput((p) => ({ ...p, project_overview: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              placeholder="Describe the project — what the client needs, the problem being solved, key requirements..."
+              placeholder="Describe the project — what the client needs, the problem being solved, key requirements and any known constraints…"
+              style={{ ...fieldStyle, resize: 'vertical', minHeight: '7rem' }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(52,211,153,0.5)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(148,163,184,0.18)')}
             />
           </div>
-
-          <button
-            type="submit"
-            disabled={generating}
-            className="w-full bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {generating ? 'Generating SOW...' : 'Generate SOW'}
-          </button>
-        </form>
+        </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mb-6">
+          <div
+            className="rounded-xl px-4 py-3 text-sm mb-4"
+            style={{
+              background: 'rgba(248,113,113,0.1)',
+              border: '1px solid rgba(248,113,113,0.3)',
+              color: '#fca5a5',
+            }}
+          >
             {error}
           </div>
         )}
 
-        {generating && (
-          <div className="text-center text-gray-500 text-sm py-10">
-            Claude is drafting your SOW — this takes about 15 seconds...
+        <button
+          type="submit"
+          disabled={generating}
+          className="w-full rounded-xl py-3 text-sm font-bold tracking-wide transition-opacity disabled:opacity-50 disabled:cursor-not-allowed mb-8"
+          style={{ background: 'var(--primary-button-bg)', color: 'var(--primary-button-text)' }}
+          onMouseEnter={(e) => !generating && (e.currentTarget.style.background = 'var(--primary-button-bg-hover)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--primary-button-bg)')}
+        >
+          {generating ? 'Generating SOW…' : 'Generate SOW →'}
+        </button>
+      </form>
+
+      {/* Generating state */}
+      {generating && (
+        <div className="text-center py-10" style={{ color: 'var(--subtle)', fontSize: '0.875rem' }}>
+          Claude is drafting your SOW — this takes about 15 seconds…
+        </div>
+      )}
+
+      {/* Preview */}
+      {sections && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-base font-semibold" style={{ color: 'var(--foreground-strong)' }}>
+              Preview
+            </h2>
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="rounded-xl px-4 py-2 text-sm font-semibold transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: 'var(--primary-button-bg)', color: 'var(--primary-button-text)' }}
+              onMouseEnter={(e) => !downloading && (e.currentTarget.style.background = 'var(--primary-button-bg-hover)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--primary-button-bg)')}
+            >
+              {downloading ? 'Preparing…' : 'Download .docx'}
+            </button>
           </div>
-        )}
 
-        {sections && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Preview</h2>
-              <button
-                onClick={handleDownload}
-                disabled={downloading}
-                className="bg-green-600 text-white rounded-lg px-5 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {downloading ? 'Preparing...' : 'Download SOW (.docx)'}
-              </button>
+          {(Object.keys(SECTION_LABELS) as (keyof SowSections)[]).map((key) => (
+            <div key={key} className="app-panel rounded-2xl p-5">
+              <p style={{ ...labelStyle, marginBottom: '0.5rem' }}>{SECTION_LABELS[key]}</p>
+              <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--foreground)', lineHeight: 1.7 }}>
+                {sections[key]}
+              </p>
             </div>
+          ))}
 
-            {(Object.keys(SECTION_LABELS) as (keyof SowSections)[]).map((key) => (
-              <div key={key} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  {SECTION_LABELS[key]}
-                </h3>
-                <p className="text-sm text-gray-800 whitespace-pre-wrap">{sections[key]}</p>
-              </div>
-            ))}
-
-            <div className="pt-2 pb-8">
-              <button
-                onClick={handleDownload}
-                disabled={downloading}
-                className="w-full bg-green-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {downloading ? 'Preparing...' : 'Download SOW (.docx)'}
-              </button>
-            </div>
+          <div className="pb-8 pt-2">
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="w-full rounded-xl py-3 text-sm font-bold tracking-wide transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: 'var(--primary-button-bg)', color: 'var(--primary-button-text)' }}
+              onMouseEnter={(e) => !downloading && (e.currentTarget.style.background = 'var(--primary-button-bg-hover)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--primary-button-bg)')}
+            >
+              {downloading ? 'Preparing…' : 'Download SOW (.docx)'}
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
