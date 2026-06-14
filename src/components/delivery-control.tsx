@@ -109,11 +109,27 @@ function getWeekRange(date: Date) {
   return { weekStart, weekEnd }
 }
 
-function getPriorityClasses(priority: Priority) {
-  if (priority === 'P1') return 'border-rose-400/30 bg-rose-400/15 text-rose-100'
-  if (priority === 'High') return 'border-orange-400/30 bg-orange-400/15 text-orange-100'
-  if (priority === 'Medium') return 'border-sky-400/30 bg-sky-400/15 text-sky-100'
-  return 'border-slate-400/30 bg-slate-400/15 text-slate-200'
+function getPriorityStyle(priority: Priority): React.CSSProperties {
+  if (priority === 'P1') return {
+    borderColor: 'var(--priority-critical-border)',
+    background: 'var(--priority-critical-bg)',
+    color: 'var(--priority-critical-text)',
+  }
+  if (priority === 'High') return {
+    borderColor: 'var(--priority-high-border)',
+    background: 'var(--priority-high-bg)',
+    color: 'var(--priority-high-text)',
+  }
+  if (priority === 'Medium') return {
+    borderColor: 'var(--priority-medium-border)',
+    background: 'var(--priority-medium-bg)',
+    color: 'var(--priority-medium-text)',
+  }
+  return {
+    borderColor: 'var(--priority-low-border)',
+    background: 'var(--priority-low-bg)',
+    color: 'var(--priority-low-text)',
+  }
 }
 
 function getPriorityLabel(priority: Priority) {
@@ -151,7 +167,10 @@ function getProjectMetricChipStyle(metric: 'total' | 'done' | 'left' | 'complete
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-8 text-center text-sm text-slate-300">
+    <div
+      className="rounded-2xl border border-dashed px-4 py-8 text-center text-sm"
+      style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--subtle)' }}
+    >
       {message}
     </div>
   )
@@ -170,7 +189,7 @@ function DashboardPanel({
 }) {
   return (
     <div className="app-card rounded-3xl overflow-hidden">
-      <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-white/10">
+      <div className="flex items-start justify-between gap-4 px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div>
           <h2 className="app-heading text-base font-semibold">{title}</h2>
           {subtitle && <p className="app-subtle text-sm mt-0.5">{subtitle}</p>}
@@ -221,7 +240,6 @@ export function DeliveryControl({
     { label: 'Lessons learnt', value: kpis.lessonsLearnt, tone: 'from-violet-400/40 to-violet-500/5' },
   ]
 
-  // Build live workload grouped by owner
   const { weekStart, weekEnd } = getWeekRange(today)
   const ownerSet = Array.from(new Set(workloadItems.map((i) => i.owner))).sort(
     (a, b) => getOwnerDisplayOrder(a) - getOwnerDisplayOrder(b),
@@ -239,12 +257,11 @@ export function DeliveryControl({
       const n = Number(i.effortHours ?? 0)
       return sum + (Number.isFinite(n) ? n : 0)
     }, 0)
-    const dueTodayItems = ownerItems
-      .filter((i) => {
-        const d = parseDate(i.plannedDate)
-        const s = i.status?.trim().toLowerCase()
-        return d && d.getTime() === today.getTime() && (s === 'in progress' || s === 'to do')
-      })
+    const dueTodayItems = ownerItems.filter((i) => {
+      const d = parseDate(i.plannedDate)
+      const s = i.status?.trim().toLowerCase()
+      return d && d.getTime() === today.getTime() && (s === 'in progress' || s === 'to do')
+    })
     const inProgressItems = ownerItems.filter((i) => {
       const d = parseDate(i.plannedDate)
       const s = i.status?.trim().toLowerCase()
@@ -266,7 +283,7 @@ export function DeliveryControl({
   })
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6 w-full">
       {/* Header */}
       <div>
         <p className="app-subtle text-xs font-semibold uppercase tracking-widest">Project</p>
@@ -281,13 +298,20 @@ export function DeliveryControl({
         {summaryCards.map((card) => (
           <section
             key={card.label}
-            className="rounded-3xl border border-white/15 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+            className="rounded-3xl border p-5"
+            style={{
+              borderColor: 'var(--border)',
+              background: 'var(--surface)',
+              boxShadow: 'var(--shadow)',
+            }}
           >
             <div className={`h-1.5 rounded-full bg-gradient-to-r ${card.tone}`} />
             <div className="mt-4 flex items-center justify-center">
-              <p className="text-sm font-semibold tracking-[0.01em] text-white text-center">{card.label}</p>
+              <p className="text-sm font-semibold tracking-[0.01em] text-center" style={{ color: 'var(--foreground-strong)' }}>
+                {card.label}
+              </p>
             </div>
-            <p className="mt-2 text-center text-[1.65rem] font-normal tracking-tight text-slate-300">
+            <p className="mt-2 text-center text-[1.65rem] font-normal tracking-tight" style={{ color: 'var(--muted)' }}>
               {card.value}
             </p>
           </section>
@@ -306,36 +330,49 @@ export function DeliveryControl({
                 {(priorityExpanded ? priorityOrderItems : priorityOrderItems.slice(0, 5)).map((item, index) => (
                   <div
                     key={item.itemId}
-                    className="group block w-full rounded-3xl border border-white/28 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_0_0_1px_rgba(255,255,255,0.1)] transition hover:border-white/36 hover:bg-[linear-gradient(145deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))]"
+                    className="group block w-full rounded-3xl border px-4 py-3 transition"
+                    style={{
+                      borderColor: 'var(--border)',
+                      background: 'var(--surface)',
+                    }}
                   >
                     <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                       <div className="min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-slate-200">
+                          <span
+                            className="rounded-full border px-2.5 py-1 text-xs font-semibold"
+                            style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
+                          >
                             #{index + 1}
                           </span>
-                          <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${getPriorityClasses(item.priority)}`}>
+                          <span
+                            className="rounded-full border px-2.5 py-1 text-xs font-medium"
+                            style={getPriorityStyle(item.priority)}
+                          >
                             {getPriorityLabel(item.priority)}
                           </span>
-                          <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-medium text-slate-200">
+                          <span
+                            className="rounded-full border px-2.5 py-1 text-xs font-medium"
+                            style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
+                          >
                             {item.status || 'No status'}
                           </span>
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-white">{item.title}</p>
-                          <p className="mt-0.5 text-xs text-slate-300">
+                          <p className="text-sm font-semibold" style={{ color: 'var(--foreground-strong)' }}>{item.title}</p>
+                          <p className="mt-0.5 text-xs" style={{ color: 'var(--subtle)' }}>
                             {item.boardName ?? 'monday'} / {item.owner} / {item.parentTitle}
                           </p>
                         </div>
                       </div>
-                      <div className="grid shrink-0 grid-cols-2 gap-2 text-sm text-slate-300 xl:w-[17rem]">
-                        <div className="rounded-2xl border border-white/6 bg-black/5 px-3 py-2">
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Planned</p>
-                          <p className="mt-0.5 text-sm text-white">{formatDate(item.plannedDate)}</p>
+                      <div className="grid shrink-0 grid-cols-2 gap-2 text-sm xl:w-[17rem]" style={{ color: 'var(--muted)' }}>
+                        <div className="rounded-2xl border px-3 py-2" style={{ borderColor: 'var(--border)', background: 'var(--inset)' }}>
+                          <p className="text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--subtle)' }}>Planned</p>
+                          <p className="mt-0.5 text-sm" style={{ color: 'var(--foreground-strong)' }}>{formatDate(item.plannedDate)}</p>
                         </div>
-                        <div className="rounded-2xl border border-white/6 bg-black/5 px-3 py-2">
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Effort</p>
-                          <p className="mt-0.5 text-sm text-white">
+                        <div className="rounded-2xl border px-3 py-2" style={{ borderColor: 'var(--border)', background: 'var(--inset)' }}>
+                          <p className="text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--subtle)' }}>Effort</p>
+                          <p className="mt-0.5 text-sm" style={{ color: 'var(--foreground-strong)' }}>
                             {formatEffortHours(item.effortHours) ? `${formatEffortHours(item.effortHours)}h` : 'Not set'}
                           </p>
                         </div>
@@ -347,11 +384,10 @@ export function DeliveryControl({
                   <button
                     type="button"
                     onClick={() => setPriorityExpanded((v) => !v)}
-                    className="mt-1 w-full rounded-2xl border border-white/10 bg-white/[0.02] py-2 text-xs font-medium text-slate-400 transition hover:border-white/16 hover:text-slate-200"
+                    className="mt-1 w-full rounded-2xl border py-2 text-xs font-medium transition"
+                    style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--subtle)' }}
                   >
-                    {priorityExpanded
-                      ? 'Show less'
-                      : `Show ${priorityOrderItems.length - 5} more`}
+                    {priorityExpanded ? 'Show less' : `Show ${priorityOrderItems.length - 5} more`}
                   </button>
                 )}
               </>
@@ -368,7 +404,10 @@ export function DeliveryControl({
               : 'Planned hours and capacity by owner for today.'
           }
           headerActions={
-            <div className="inline-flex rounded-full border border-white/12 bg-black/10 p-1">
+            <div
+              className="inline-flex rounded-full border p-1"
+              style={{ borderColor: 'var(--border)', background: 'var(--inset)' }}
+            >
               {(['week', 'day'] as const).map((scope) => (
                 <button
                   key={scope}
@@ -377,8 +416,9 @@ export function DeliveryControl({
                   className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
                     workloadScope === scope
                       ? 'border border-emerald-300/60 bg-emerald-100 text-emerald-950 shadow-sm'
-                      : 'border border-transparent text-slate-300 hover:text-white'
+                      : 'border border-transparent'
                   }`}
+                  style={workloadScope !== scope ? { color: 'var(--subtle)' } : {}}
                 >
                   {scope === 'week' ? 'Week' : 'Today'}
                 </button>
@@ -402,11 +442,15 @@ export function DeliveryControl({
                 const remainingHours = Math.max(capacity - entry.estimatedEffort, 0)
 
                 return (
-                  <article key={entry.owner} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                  <article
+                    key={entry.owner}
+                    className="rounded-2xl border p-4"
+                    style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}
+                  >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="text-base font-semibold text-white">{entry.owner}</p>
-                        <p className="text-sm text-slate-300">
+                        <p className="text-base font-semibold" style={{ color: 'var(--foreground-strong)' }}>{entry.owner}</p>
+                        <p className="text-sm" style={{ color: 'var(--muted)' }}>
                           {entry.inProgressCount} in progress / {entry.openCount} open /{' '}
                           {entry.overdueCount} overdue / {entry.blockedCount} blocked
                         </p>
@@ -415,25 +459,28 @@ export function DeliveryControl({
 
                     {/* Capacity bar */}
                     <div className="mt-4">
-                      <div className="flex items-center justify-between text-xs text-slate-400">
+                      <div className="flex items-center justify-between text-xs" style={{ color: 'var(--subtle)' }}>
                         <span>{entry.estimatedEffort}h planned</span>
                         <span>{isOverCapacity ? `${formatHours(overHours)}h over` : `${formatHours(remainingHours)}h left`}</span>
                       </div>
-                      <div className="relative mt-2 flex h-5 overflow-hidden rounded-full border border-white/8 bg-white/6">
+                      <div
+                        className="relative mt-2 flex h-5 overflow-hidden rounded-full border"
+                        style={{ borderColor: 'var(--border)', background: 'var(--inset)' }}
+                      >
                         <div
-                          className={`h-full border-r border-white/20 ${
+                          className={`h-full border-r ${
                             isOverCapacity
                               ? 'bg-[linear-gradient(90deg,rgba(248,113,113,0.98),rgba(239,68,68,0.94))]'
                               : 'bg-[linear-gradient(90deg,rgba(34,197,94,0.78),rgba(22,163,74,0.72))]'
                           }`}
-                          style={{ width: `${usedPct}%` }}
+                          style={{ width: `${usedPct}%`, borderColor: 'var(--border)' }}
                         />
                         <div
                           className={`h-full ${isOverCapacity ? 'bg-rose-500/20' : 'bg-slate-500/20'}`}
                           style={{ width: `${remainingPct}%` }}
                         />
                         <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-3 text-[11px] font-medium text-white">
-                          <span className="whitespace-nowrap drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]">
+                          <span className="whitespace-nowrap drop-shadow-[0_1px_1px_rgba(0,0,0,0.45)]">
                             {Math.min(Math.round((entry.estimatedEffort / capacity) * 100), 999)}%{' '}
                             {workloadScope === 'week' ? 'weekly' : 'daily'} capacity
                           </span>
@@ -446,12 +493,23 @@ export function DeliveryControl({
                       <button
                         type="button"
                         onClick={() => toggleWorkload(sectionKey)}
-                        className="flex w-full items-center justify-between rounded-2xl border border-emerald-300/22 bg-emerald-400/7 px-3 py-2 text-left transition hover:border-emerald-300/36 hover:bg-emerald-400/11"
+                        className="flex w-full items-center justify-between rounded-2xl border px-3 py-2 text-left transition"
+                        style={{
+                          borderColor: 'var(--accent-border)',
+                          background: 'var(--accent-soft)',
+                        }}
                       >
-                        <span className="text-sm font-medium text-white">
+                        <span className="text-sm font-medium" style={{ color: 'var(--foreground-strong)' }}>
                           {workloadScope === 'day' ? `Today tasks (${taskCount})` : `Week tasks (${taskCount})`}
                         </span>
-                        <span className="rounded-full border border-emerald-500/24 bg-emerald-600/80 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-sm">
+                        <span
+                          className="rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] shadow-sm"
+                          style={{
+                            borderColor: 'var(--accent-border)',
+                            background: 'var(--primary-button-bg)',
+                            color: 'var(--primary-button-text)',
+                          }}
+                        >
                           {isExpanded ? 'Hide' : 'Show'}
                         </span>
                       </button>
@@ -459,12 +517,16 @@ export function DeliveryControl({
                         <div className="mt-3 space-y-2">
                           {workloadScope === 'day' ? (
                             entry.dueTodayItems.length === 0 ? (
-                              <p className="text-sm text-slate-300">No tasks due today.</p>
+                              <p className="text-sm" style={{ color: 'var(--muted)' }}>No tasks due today.</p>
                             ) : (
                               entry.dueTodayItems.map((item) => (
-                                <div key={item.itemId} className="block rounded-xl border border-white/10 bg-black/10 px-3 py-2">
-                                  <p className="text-sm font-medium text-white">{item.title}</p>
-                                  <p className="mt-1 text-xs text-slate-300">
+                                <div
+                                  key={item.itemId}
+                                  className="block rounded-xl border px-3 py-2"
+                                  style={{ borderColor: 'var(--border)', background: 'var(--inset)' }}
+                                >
+                                  <p className="text-sm font-medium" style={{ color: 'var(--foreground-strong)' }}>{item.title}</p>
+                                  <p className="mt-1 text-xs" style={{ color: 'var(--subtle)' }}>
                                     {item.boardName ?? 'monday'} / {item.status ?? 'No status'} /{' '}
                                     {formatEffortHours(item.effortHours) ? `${formatEffortHours(item.effortHours)}h` : 'No effort'}
                                   </p>
@@ -473,19 +535,23 @@ export function DeliveryControl({
                             )
                           ) : (
                             entry.inProgressItems.length === 0 ? (
-                              <p className="text-sm text-slate-300">No to-do or in-progress items due this week.</p>
+                              <p className="text-sm" style={{ color: 'var(--muted)' }}>No to-do or in-progress items due this week.</p>
                             ) : (
                               entry.inProgressItems.map((item) => (
-                                <div key={item.itemId} className="block rounded-xl border border-white/10 bg-black/10 px-3 py-2">
-                                  <p className="truncate text-xs text-slate-200">
-                                    <span className="font-medium text-white">{item.title}</span>{' '}
-                                    <span className="text-slate-400">/</span>{' '}
+                                <div
+                                  key={item.itemId}
+                                  className="block rounded-xl border px-3 py-2"
+                                  style={{ borderColor: 'var(--border)', background: 'var(--inset)' }}
+                                >
+                                  <p className="truncate text-xs" style={{ color: 'var(--muted)' }}>
+                                    <span className="font-medium" style={{ color: 'var(--foreground-strong)' }}>{item.title}</span>{' '}
+                                    <span style={{ color: 'var(--subtle)' }}>/</span>{' '}
                                     {item.boardName ?? 'monday'}{' '}
-                                    <span className="text-slate-400">/</span>{' '}
+                                    <span style={{ color: 'var(--subtle)' }}>/</span>{' '}
                                     {item.status ?? 'No status'}{' '}
-                                    <span className="text-slate-400">/</span>{' '}
+                                    <span style={{ color: 'var(--subtle)' }}>/</span>{' '}
                                     {formatDate(item.plannedDate)}{' '}
-                                    <span className="text-slate-400">/</span>{' '}
+                                    <span style={{ color: 'var(--subtle)' }}>/</span>{' '}
                                     {formatEffortHours(item.effortHours) ? `${formatEffortHours(item.effortHours)}h` : 'No effort'}
                                   </p>
                                 </div>
@@ -520,7 +586,7 @@ export function DeliveryControl({
                 style={{ borderColor: 'var(--divider)' }}
               >
                 <div className="flex items-center gap-3">
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-white">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--foreground-strong)' }}>
                     Active projects
                   </h3>
                   <span

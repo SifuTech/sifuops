@@ -32,8 +32,15 @@ export async function GET(request: NextRequest) {
     })),
   )
 
+  // Only run Mon–Fri (1–5) and Sunday (0). Skip Saturday (6).
+  const dayUTC = new Date().getUTCDay()
+  if (dayUTC === 6) {
+    return Response.json({ ok: true, skipped: 'Saturday' })
+  }
+  const isSunday = dayUTC === 0
+
   const maskNames = request.nextUrl.searchParams.get('maskNames') === '1'
-  const content = (await generateBriefing(projectWorkData, { maskNames })).slice(0, 2000)
+  const content = (await generateBriefing(projectWorkData, { maskNames, isSunday })).slice(0, 2000)
 
   const res = await fetch(webhookUrl, {
     method: 'POST',

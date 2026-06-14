@@ -1,4 +1,6 @@
 import { SidebarNav } from '@/components/sidebar-nav'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { SyncStatus } from '@/components/sync-status'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -6,23 +8,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <header className="app-header sticky top-0 z-20 border-b backdrop-blur-xl">
         <div className="flex h-16 items-center justify-between px-6">
           <a href="/" className="flex items-center">
-            <span className="text-sm font-semibold tracking-wide" style={{ color: 'var(--foreground-strong)' }}>
-              SifuOps
+            <span className="text-sm font-bold tracking-wide" style={{ color: '#ffffff', WebkitFontSmoothing: 'antialiased' }}>
+              SifuTechGaming
             </span>
           </a>
-          <form action="/api/auth/logout" method="POST">
-            <button
-              type="submit"
-              className="rounded-xl border px-3 py-1.5 text-xs font-medium transition hover:opacity-80"
-              style={{
-                borderColor: 'var(--border)',
-                background: 'rgba(255,255,255,0.04)',
-                color: 'var(--subtle)',
-              }}
-            >
-              Sign out
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            <SyncStatus />
+            <ThemeToggle />
+            <form action="/api/auth/logout" method="POST">
+              <button
+                type="submit"
+                className="rounded-xl border px-3 py-1.5 text-xs font-medium transition hover:opacity-80"
+                style={{
+                  borderColor: 'rgba(255,255,255,0.3)',
+                  background: 'rgba(255,255,255,0.08)',
+                  color: '#ffffff',
+                  WebkitFontSmoothing: 'antialiased',
+                  fontWeight: 600,
+                }}
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </header>
 

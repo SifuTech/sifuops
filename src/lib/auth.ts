@@ -1,5 +1,6 @@
 const COOKIE_NAME = 'sifuops_session'
-const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000
+const SESSION_DURATION_REMEMBER_MS = 30 * 24 * 60 * 60 * 1000
 
 function getSecret(): string {
   const s = process.env.SESSION_SECRET
@@ -29,9 +30,10 @@ function fromBase64url(str: string): Uint8Array {
   return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))
 }
 
-export async function createSessionToken(username: string): Promise<string> {
+export async function createSessionToken(username: string, remember = false): Promise<string> {
+  const duration = remember ? SESSION_DURATION_REMEMBER_MS : SESSION_DURATION_MS
   const payload = toBase64url(
-    new TextEncoder().encode(JSON.stringify({ u: username, exp: Date.now() + SESSION_DURATION_MS })),
+    new TextEncoder().encode(JSON.stringify({ u: username, exp: Date.now() + duration })),
   )
   const key = await getKey()
   const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)) as ArrayBuffer)
@@ -62,4 +64,33 @@ export function checkCredentials(username: string, password: string): boolean {
   return username === validUser && password === validPass
 }
 
-export { COOKIE_NAME }
+const PENDING_COOKIE = 'sifuops_pending'
+const PENDING_DURATION_MS = 10 * 60 * 1000 // 10 minutes
+
+export async function createPendingToken(username: string, from: string, remember: boolean): Promise<string> {
+  const payload = toBase64url(
+    new TextEncoder().encode(JSON.stringify({ u: username, from, remember, exp: Date.now() + PENDING_DURATION_MS })),
+  )
+  const key = await getKey()
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)) as ArrayBuffer)
+  return `${payload}.${toBase64url(sig)}`
+}
+
+export async function verifyPendingToken(token: string): Promise<{ username: string; from: string; remember: boolean } | null> {
+  try {
+    const dot = token.lastIndexOf('.')
+    if (dot === -1) return null
+    const payload = token.slice(0, dot)
+    const sig = fromBase64url(token.slice(dot + 1))
+    const key = await getKey()
+    const valid = await crypto.subtle.verify('HMAC', key, sig.buffer as ArrayBuffer, new TextEncoder().encode(payload).buffer as ArrayBuffer)
+    if (!valid) return null
+    const data = JSON.parse(new TextDecoder().decode(fromBase64url(payload))) as { u: string; from: string; remember: boolean; exp: number }
+    if (data.exp < Date.now()) return null
+    return { username: data.u, from: data.from, remember: data.remember }
+  } catch {
+    return null
+  }
+}
+
+export { COOKIE_NAME, PENDING_COOKIE, SESSION_DURATION_MS, SESSION_DURATION_REMEMBER_MS, PENDING_DURATION_MS }

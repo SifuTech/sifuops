@@ -1,33 +1,26 @@
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { verifySessionToken, COOKIE_NAME } from '@/lib/auth'
-import PasswordInput from './PasswordInput'
-import { ThemeToggle } from '@/components/theme-toggle'
+import { verifyPendingToken, PENDING_COOKIE } from '@/lib/auth'
 
-type SearchParams = Promise<{ error?: string; from?: string }>
+type SearchParams = Promise<{ error?: string }>
 
-export default async function LoginPage({ searchParams }: { searchParams: SearchParams }) {
-  const { error, from } = await searchParams
+export default async function VerifyTotpPage({ searchParams }: { searchParams: SearchParams }) {
+  const { error } = await searchParams
 
-  // Already logged in — redirect away
   const cookieStore = await cookies()
-  const token = cookieStore.get(COOKIE_NAME)?.value
-  if (token) {
-    const session = await verifySessionToken(token)
-    if (session) redirect(from ?? '/')
-  }
+  const pendingToken = cookieStore.get(PENDING_COOKIE)?.value
+  if (!pendingToken) redirect('/login')
+  const pending = await verifyPendingToken(pendingToken)
+  if (!pending) redirect('/login')
 
   const hasError = error === '1'
 
   return (
     <div
-      className="relative flex min-h-screen items-center justify-center px-4"
+      className="flex min-h-screen items-center justify-center px-4"
       style={{ background: 'var(--background)' }}
     >
-      <div className="absolute right-4 top-4">
-        <ThemeToggle />
-      </div>
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex justify-center">
@@ -45,10 +38,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
         {/* Headings */}
         <div className="mb-6 -mt-16 text-center">
           <h1 className="font-medium" style={{ color: 'var(--foreground-strong)', fontSize: '20px' }}>
-            Welcome back
+            Two-factor authentication
           </h1>
           <p className="mt-1 text-base" style={{ color: 'var(--subtle)' }}>
-            Sign in to your account to continue
+            Enter the code from your authenticator app
           </p>
         </div>
 
@@ -63,28 +56,30 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
                 color: '#fca5a5',
               }}
             >
-              Incorrect username or password.
+              Incorrect code. Please try again.
             </div>
           )}
 
-          <form action="/api/auth/login" method="POST" className="space-y-4">
-            <input type="hidden" name="from" value={from ?? '/'} />
-
+          <form action="/api/auth/verify-totp" method="POST" className="space-y-4">
             <div className="space-y-1.5">
               <label
-                htmlFor="username"
+                htmlFor="code"
                 className="block text-xs font-medium uppercase tracking-widest"
                 style={{ color: 'var(--subtle)' }}
               >
-                Username
+                Authenticator code
               </label>
               <input
-                id="username"
-                name="username"
+                id="code"
+                name="code"
                 type="text"
-                autoComplete="username"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="000000"
                 required
-                className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition focus:ring-2"
+                autoFocus
+                className="w-full rounded-xl border px-4 py-2.5 text-center text-lg tracking-[0.5em] outline-none transition focus:ring-2"
                 style={{
                   background: 'rgba(255,255,255,0.04)',
                   borderColor: 'var(--border)',
@@ -95,40 +90,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
               />
             </div>
 
-            <div className="flex justify-end">
-              <a
-                href="/forgot-password"
-                className="text-xs transition hover:opacity-80"
-                style={{ color: '#34d399' }}
-              >
-                Forgot password?
-              </a>
-            </div>
-
-            <div className="-mt-3 space-y-1.5">
-              <label
-                htmlFor="password"
-                className="block text-xs font-medium uppercase tracking-widest"
-                style={{ color: 'var(--subtle)' }}
-              >
-                Password
-              </label>
-              <PasswordInput />
-            </div>
-
-            <label className="flex cursor-pointer items-center gap-2.5">
-              <input
-                type="checkbox"
-                name="remember"
-                value="1"
-                className="h-4 w-4 rounded border accent-[#34d399]"
-                style={{ borderColor: 'var(--border)' }}
-              />
-              <span className="text-sm" style={{ color: 'var(--subtle)' }}>
-                Remember me for 30 days
-              </span>
-            </label>
-
             <button
               type="submit"
               className="mt-2 w-full rounded-xl px-4 py-3 text-sm font-semibold transition hover:opacity-90 active:opacity-80"
@@ -137,9 +98,19 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
                 color: 'var(--primary-button-text)',
               }}
             >
-              Sign in
+              Verify
             </button>
           </form>
+
+          <div className="mt-5 text-center">
+            <a
+              href="/login"
+              className="text-sm transition hover:opacity-80"
+              style={{ color: 'var(--subtle)' }}
+            >
+              ← Back to sign in
+            </a>
+          </div>
         </div>
       </div>
     </div>
