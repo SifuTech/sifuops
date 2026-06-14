@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export default function PasswordInput() {
+export default function PasswordInput({ defaultValue }: { defaultValue?: string }) {
   const [show, setShow] = useState(false)
 
   return (
@@ -12,6 +12,7 @@ export default function PasswordInput() {
         name="password"
         type={show ? 'text' : 'password'}
         autoComplete="current-password"
+        defaultValue={defaultValue}
         required
         className="w-full rounded-xl border px-4 py-2.5 pr-11 text-sm outline-none transition focus:ring-2"
         style={{

@@ -124,11 +124,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
                 name="username"
                 type="text"
                 autoComplete="username"
+                defaultValue={demoMode ? 'sifutechgaming' : undefined}
                 required
                 className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition focus:ring-2"
                 style={{
                   background: 'rgba(255,255,255,0.04)',
-                  borderColor: 'var(--border)',
+                  borderColor: demoMode ? 'rgba(251,191,36,0.35)' : 'var(--border)',
                   color: 'var(--foreground-strong)',
                   // @ts-expect-error CSS variable
                   '--tw-ring-color': 'rgba(52,211,153,0.4)',
@@ -154,7 +155,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
               >
                 Password
               </label>
-              <PasswordInput />
+              <PasswordInput defaultValue={demoMode ? 'sifutechgaming' : undefined} />
             </div>
 
             <label className="flex cursor-pointer items-center gap-2.5">
@@ -182,21 +183,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
             </button>
           </form>
 
-          {demoMode && (
-            <form action="/api/demo/login" method="POST" className="mt-3">
-              <button
-                type="submit"
-                className="w-full rounded-xl px-4 py-3 text-sm font-semibold transition hover:opacity-90 active:opacity-80"
-                style={{
-                  background: 'rgba(251,191,36,0.12)',
-                  border: '1px solid rgba(251,191,36,0.35)',
-                  color: 'rgb(251,191,36)',
-                }}
-              >
-                Enter Demo →
-              </button>
-            </form>
-          )}
         </div>
       </div>
     </div>
