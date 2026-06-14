@@ -11,6 +11,8 @@ const PUBLIC_PATHS = [
   '/api/auth/setup-totp',
   '/login/verify',
   '/api/good-morning',
+  '/api/demo/toggle',
+  '/api/demo/login',
 ]
 
 export async function proxy(request: NextRequest) {
