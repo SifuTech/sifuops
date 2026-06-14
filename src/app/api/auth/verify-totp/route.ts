@@ -6,6 +6,7 @@ import {
 } from '@/lib/auth'
 import { getTotpSecret } from '@/lib/db'
 import { verifyCode } from '@/lib/totp'
+import { DEMO_COOKIE } from '@/lib/demo'
 
 export async function POST(request: NextRequest) {
   const body = await request.formData()
@@ -17,6 +18,12 @@ export async function POST(request: NextRequest) {
   const pending = await verifyPendingToken(pendingToken)
   if (!pending) return redirectToLogin(request, 'Session expired. Please sign in again.')
 
+  // Demo mode: accept 123456 without real TOTP verification
+  const isDemo = request.cookies.get(DEMO_COOKIE)?.value === '1'
+  if (isDemo && code === '123456') {
+    return issueSession(request, pending.username, pending.remember, pending.from)
+  }
+
   const totpRow = await getTotpSecret(pending.username)
   if (!totpRow?.verified) return redirectToLogin(request, '2FA not configured.')
 
@@ -26,10 +33,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(url, { status: 303 })
   }
 
-  const sessionToken = await createSessionToken(pending.username, pending.remember)
-  const maxAge = Math.floor((pending.remember ? SESSION_DURATION_REMEMBER_MS : SESSION_DURATION_MS) / 1000)
+  return issueSession(request, pending.username, pending.remember, pending.from)
+}
 
-  const response = NextResponse.redirect(new URL(pending.from, request.url), { status: 303 })
+async function issueSession(request: NextRequest, username: string, remember: boolean, destination: string) {
+  const sessionToken = await createSessionToken(username, remember)
+  const maxAge = Math.floor((remember ? SESSION_DURATION_REMEMBER_MS : SESSION_DURATION_MS) / 1000)
+
+  const response = NextResponse.redirect(new URL(destination, request.url), { status: 303 })
   response.cookies.set(COOKIE_NAME, sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

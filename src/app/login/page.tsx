@@ -140,6 +140,25 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
               Sign in
             </button>
           </form>
+
+          <div className="mt-6 border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+            <form action="/api/demo/login" method="POST">
+              <button
+                type="submit"
+                className="w-full rounded-xl px-4 py-2.5 text-sm font-medium transition hover:opacity-80"
+                style={{
+                  background: 'rgba(251,191,36,0.08)',
+                  border: '1px solid rgba(251,191,36,0.25)',
+                  color: 'rgb(251,191,36)',
+                }}
+              >
+                Try Demo →
+              </button>
+            </form>
+            <p className="mt-2 text-center text-xs" style={{ color: 'var(--subtle)' }}>
+              Simulated data — no real credentials needed
+            </p>
+          </div>
         </div>
       </div>
     </div>

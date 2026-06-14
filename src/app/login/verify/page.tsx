@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { verifyPendingToken, PENDING_COOKIE } from '@/lib/auth'
+import { DEMO_COOKIE } from '@/lib/demo'
 
 type SearchParams = Promise<{ error?: string }>
 
@@ -13,6 +14,8 @@ export default async function VerifyTotpPage({ searchParams }: { searchParams: S
   if (!pendingToken) redirect('/login')
   const pending = await verifyPendingToken(pendingToken)
   if (!pending) redirect('/login')
+
+  const isDemo = cookieStore.get(DEMO_COOKIE)?.value === '1'
 
   const hasError = error === '1'
 
@@ -47,6 +50,19 @@ export default async function VerifyTotpPage({ searchParams }: { searchParams: S
 
         {/* Card */}
         <div className="app-card rounded-3xl p-8">
+          {isDemo && (
+            <div
+              className="mb-5 rounded-xl px-4 py-3 text-sm text-center"
+              style={{
+                background: 'rgba(251,191,36,0.08)',
+                border: '1px solid rgba(251,191,36,0.25)',
+                color: 'rgb(251,191,36)',
+              }}
+            >
+              Demo mode — enter <strong>123456</strong>
+            </div>
+          )}
+
           {hasError && (
             <div
               className="mb-5 rounded-xl border px-4 py-3 text-sm"
