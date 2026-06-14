@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.redirect(new URL(referer), { status: 303 })
 
   if (isDemo) {
-    res.cookies.delete(DEMO_COOKIE)
+    res.cookies.set(DEMO_COOKIE, '', { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 0 })
   } else {
     res.cookies.set(DEMO_COOKIE, '1', { path: '/', httpOnly: true, sameSite: 'lax' })
   }
