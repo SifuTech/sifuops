@@ -133,9 +133,8 @@ export async function generateBriefing(
     : 'This is the daily morning briefing.'
 
   const message = await client.messages.create({
-    model: 'claude-opus-4-7',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
-    thinking: { type: 'adaptive' },
     system: [
       {
         type: 'text',

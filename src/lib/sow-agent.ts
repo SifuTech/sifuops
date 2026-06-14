@@ -69,9 +69,8 @@ export async function generateSowSections(input: SowInput): Promise<SowSections>
   }
 
   const message = await client.messages.create({
-    model: 'claude-opus-4-7',
+    model: 'claude-sonnet-4-6',
     max_tokens: 2048,
-    thinking: { type: 'adaptive' },
     system: systemBlocks,
     messages: [
       {
