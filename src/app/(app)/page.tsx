@@ -1,3 +1,6 @@
+import { cookies } from 'next/headers'
+import { DEMO_COOKIE } from '@/lib/demo'
+import { DEMO_WORK_ITEMS, DEMO_PROJECTS, DEMO_LESSONS_COUNT } from '@/lib/demo-data'
 import { sql } from '@/lib/db'
 import {
   DeliveryControl,
@@ -78,29 +81,38 @@ function parseHours(effort: string | null): number {
 }
 
 async function getDashboardData() {
+  const cookieStore = await cookies()
+  const isDemo = cookieStore.get(DEMO_COOKIE)?.value === '1'
+
   let items: RawWorkItem[] = []
   let projects: RawProject[] = []
   let lessonsCount = 0
 
-  try {
-    items = (await sql`SELECT * FROM monday_work_items`) as RawWorkItem[]
-  } catch {
-    // table may not exist yet
-  }
+  if (isDemo) {
+    items = DEMO_WORK_ITEMS as RawWorkItem[]
+    projects = DEMO_PROJECTS
+    lessonsCount = DEMO_LESSONS_COUNT
+  } else {
+    try {
+      items = (await sql`SELECT * FROM monday_work_items`) as RawWorkItem[]
+    } catch {
+      // table may not exist yet
+    }
 
-  try {
-    projects = (await sql`
-      SELECT board_id, board_name FROM projects WHERE active = true ORDER BY board_name
-    `) as RawProject[]
-  } catch {
-    // table may not exist yet
-  }
+    try {
+      projects = (await sql`
+        SELECT board_id, board_name FROM projects WHERE active = true ORDER BY board_name
+      `) as RawProject[]
+    } catch {
+      // table may not exist yet
+    }
 
-  try {
-    const rows = (await sql`SELECT COUNT(*)::int AS count FROM lessons_learnt`) as { count: number }[]
-    lessonsCount = rows[0]?.count ?? 0
-  } catch {
-    // ignore
+    try {
+      const rows = (await sql`SELECT COUNT(*)::int AS count FROM lessons_learnt`) as { count: number }[]
+      lessonsCount = rows[0]?.count ?? 0
+    } catch {
+      // ignore
+    }
   }
 
   const openItems = items.filter((i) => isOpen(i.status))

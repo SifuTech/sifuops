@@ -4,6 +4,7 @@ import { verifySessionToken, COOKIE_NAME } from '@/lib/auth'
 import { sql, ensureTable, ensureLessonsTable, ensureWorkItemsTable } from '@/lib/db'
 import { syncProjects } from '@/lib/sync-projects'
 import { syncWorkItems } from '@/lib/sync-work-items'
+import { isDemoMode } from '@/lib/demo'
 
 async function getLastSync(): Promise<string | null> {
   try {
@@ -26,12 +27,18 @@ export async function GET(request: NextRequest) {
   if (!await requireSession(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  if (await isDemoMode(request)) {
+    return NextResponse.json({ lastSync: new Date().toISOString() })
+  }
   return NextResponse.json({ lastSync: await getLastSync() })
 }
 
 export async function POST(request: NextRequest) {
   if (!await requireSession(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (await isDemoMode(request)) {
+    return NextResponse.json({ lastSync: new Date().toISOString(), projects: 4 })
   }
 
   await ensureTable()

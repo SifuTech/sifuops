@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
+import { isDemoMode } from '@/lib/demo'
+import { DEMO_LESSONS } from '@/lib/demo-data'
 
 // Keywords associated with each project type — used for relevance scoring
 const PROJECT_TYPE_KEYWORDS: Record<string, string[]> = {
@@ -40,6 +42,10 @@ function scoreLesson(itemName: string, modules: string[], typeKeywords: string[]
 
 export async function POST(req: NextRequest) {
   try {
+    if (await isDemoMode(req)) {
+      return NextResponse.json({ lessons: DEMO_LESSONS })
+    }
+
     const body = await req.json()
     const { projectType, modules } = body as {
       projectType: string

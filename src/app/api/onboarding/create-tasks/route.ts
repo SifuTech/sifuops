@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getBoardGroups, createItem, addItemUpdate } from '@/lib/monday'
 import type { AgentOutput } from '@/app/api/onboarding/analyse/route'
+import { isDemoMode } from '@/lib/demo'
 
 type Task = AgentOutput['suggested_tasks'][number]
 
@@ -56,6 +57,15 @@ export async function POST(req: NextRequest) {
     }
     if (!Array.isArray(tasks) || tasks.length === 0) {
       return NextResponse.json({ error: 'tasks must be a non-empty array' }, { status: 400 })
+    }
+
+    if (await isDemoMode(req)) {
+      const results = tasks.map((task) => ({
+        title: task.title,
+        success: true,
+        itemId: `demo-task-${Math.random().toString(36).slice(2, 8)}`,
+      }))
+      return NextResponse.json({ results })
     }
 
     // Resolve the group once for all tasks

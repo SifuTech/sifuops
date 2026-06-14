@@ -1,8 +1,14 @@
+import { cookies } from 'next/headers'
 import { SidebarNav } from '@/components/sidebar-nav'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { SyncStatus } from '@/components/sync-status'
+import { DemoBanner } from '@/components/demo-banner'
+import { DEMO_COOKIE } from '@/lib/demo'
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies()
+  const demoMode = cookieStore.get(DEMO_COOKIE)?.value === '1'
+
   return (
     <>
       <header className="app-header sticky top-0 z-20 border-b backdrop-blur-xl">
@@ -34,9 +40,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
+      {demoMode && <DemoBanner />}
+
       <div className="grid min-h-[calc(100vh-4rem)] lg:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="app-sidebar hidden lg:block px-4 py-6">
-          <SidebarNav />
+          <SidebarNav demoMode={demoMode} />
         </aside>
         <main className="p-6">{children}</main>
       </div>

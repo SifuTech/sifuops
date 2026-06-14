@@ -1,6 +1,13 @@
+import { NextRequest } from 'next/server'
 import { sql } from '@/lib/db'
+import { isDemoMode } from '@/lib/demo'
+import { DEMO_BOARDS, DEMO_LESSONS_COUNT } from '@/lib/demo-data'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (await isDemoMode(req)) {
+    return Response.json({ projects: DEMO_BOARDS, totalLessons: DEMO_LESSONS_COUNT })
+  }
+
   const projects = await sql`
     SELECT
       p.board_id,

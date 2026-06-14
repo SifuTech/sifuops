@@ -4,6 +4,8 @@ import path from 'node:path'
 import Anthropic from '@anthropic-ai/sdk'
 import type { NewProjectInput } from '@/app/(app)/new-project/page'
 import type { LessonGroup } from '@/app/api/onboarding/lessons/route'
+import { isDemoMode } from '@/lib/demo'
+import { DEMO_AGENT_RESULTS } from '@/lib/demo-data'
 
 const client = new Anthropic()
 
@@ -183,6 +185,10 @@ export async function POST(req: NextRequest) {
 
     if (!projectInput?.projectName) {
       return NextResponse.json({ error: 'projectInput is required' }, { status: 400 })
+    }
+
+    if (await isDemoMode(req)) {
+      return NextResponse.json(DEMO_AGENT_RESULTS)
     }
 
     const [userPrompt, referenceDocs] = await Promise.all([
