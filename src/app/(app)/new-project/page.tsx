@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 const PROJECT_TYPES = [
@@ -79,6 +79,17 @@ export default function NewProjectPage() {
   const [input, setInput] = useState<NewProjectInput>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('onboarding_input')
+    if (saved) {
+      try {
+        setInput(JSON.parse(saved) as NewProjectInput)
+      } catch {
+        // ignore corrupt data
+      }
+    }
+  }, [])
 
   function set<K extends keyof NewProjectInput>(key: K, value: NewProjectInput[K]) {
     setInput((prev) => ({ ...prev, [key]: value }))
