@@ -19,7 +19,7 @@ SECTION 1 — Focus
 Header (weekday): __🎯 **Focus today:**__
 Header (Sunday):  __🗓️ **Focus Monday:**__
 
-Group ONLY items labelled [OVERDUE] or [DUE TODAY/MONDAY] by project. For each project that has qualifying tasks:
+Group ONLY items labelled [OVERDUE] or [DUE TODAY/MONDAY] by project. These are tasks that have a target date and are still active (To Do or In Progress). For each project that has qualifying tasks:
   📌 **Project Name**
   • Task name — short justification (e.g. "overdue 2 days", "deadline today", "blocks milestone")
   • Task name — short justification
@@ -28,6 +28,7 @@ Group ONLY items labelled [OVERDUE] or [DUE TODAY/MONDAY] by project. For each p
 - If more than 3 projects qualify, pick the most critical ones using judgment
 - If nothing qualifies, write "Nothing overdue or due — clear start ✅"
 - Leave a blank line between each project block
+- Do NOT include items labelled [AWAITING CLIENT], [BLOCKED], or items with no target date in this section
 
 ━━━━━━━━━━━━━━━━━━━━━
 SECTION 2 — Other
@@ -38,11 +39,14 @@ For each project with outstanding work NOT already covered in Section 1:
   🗂 **Project Name**
   • Key task or theme outstanding
   • Another key task if relevant
+  • [AWAITING CLIENT] Task name — awaiting client response
+  • [BLOCKED] Task name — blocked
 
 - Group by project — do not create separate entries for the same project
 - Keep bullets concise — one line each
 - Omit projects with nothing notable
 - Leave a blank line between each project block
+- Items labelled [AWAITING CLIENT] or [BLOCKED] must appear here (not in Section 1), noting their status briefly
 
 ━━━━━━━━━━━━━━━━━━━━━
 GLOBAL FORMAT RULES
@@ -67,12 +71,21 @@ function normaliseDate(d: string): string {
   return d.slice(0, 10)
 }
 
-type DateLabel = '[OVERDUE]' | '[DUE TODAY/MONDAY]' | ''
+type DateLabel = '[OVERDUE]' | '[DUE TODAY/MONDAY]' | '[AWAITING CLIENT]' | '[BLOCKED]' | ''
 
 function dateLabel(item: WorkItem, todayStr: string, focusStr: string): DateLabel {
-  const raw = item.targetDate || item.plannedDate
-  if (!raw) return ''
-  const d = normaliseDate(raw)
+  const statusLower = item.status?.trim().toLowerCase() ?? ''
+
+  // Done items get no label — excluded from both sections
+  if (statusLower === 'done' || statusLower === 'complete' || statusLower === 'completed') return ''
+
+  // Awaiting client / blocked → routed to Other section by the prompt
+  if (statusLower === 'awaiting client' || statusLower === 'awaiting') return '[AWAITING CLIENT]'
+  if (statusLower === 'blocked') return '[BLOCKED]'
+
+  // Focus section only applies to items with an explicit target date
+  if (!item.targetDate) return ''
+  const d = normaliseDate(item.targetDate)
   if (d < todayStr) return '[OVERDUE]'
   if (d === focusStr) return '[DUE TODAY/MONDAY]'
   return ''
