@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { WorkItem } from './monday'
+import type { SubItem, WorkItem } from './monday'
 
 const client = new Anthropic()
 
@@ -9,7 +9,7 @@ export type ProjectWorkData = {
 }
 
 const SYSTEM_PROMPT = `You are a Delivery Manager's daily briefing assistant for a game development studio.
-Each morning you receive active project tasks grouped by project. Items are pre-labelled [OVERDUE] or [DUE TODAY/MONDAY] where relevant.
+You receive two pre-split lists: FOCUS ITEMS and OTHER ITEMS. One group may be labelled "BAU" — ongoing operational tasks; treat them the same as any project. Subtasks appear beneath tasks with ↳ and may carry [OVERDUE] or [DUE TODAY] labels with planned dates.
 
 Produce a Discord briefing in exactly two sections. Use emojis throughout to make the message clear and easy to scan.
 
@@ -19,34 +19,37 @@ SECTION 1 — Focus
 Header (weekday): __🎯 **Focus today:**__
 Header (Sunday):  __🗓️ **Focus Monday:**__
 
-Group ONLY items labelled [OVERDUE] or [DUE TODAY/MONDAY] by project. These are tasks that have a target date and are still active (To Do or In Progress). For each project that has qualifying tasks:
-  📌 **Project Name**
-  • Task name — short justification (e.g. "overdue 2 days", "deadline today", "blocks milestone")
-  • Task name — short justification
+Format every task from the FOCUS ITEMS list. Do not add or remove any tasks.
 
-- Tasks from the same project go under the same project header — do NOT split them into separate entries
-- If more than 3 projects qualify, pick the most critical ones using judgment
-- If nothing qualifies, write "Nothing overdue or due — clear start ✅"
+For each project that has focus tasks:
+  📌 **Project Name**
+  • Task name — short justification (e.g. "P1 · overdue 3 days · 6h", "High priority · deadline today")
+
+ORDERING — apply in this exact sequence:
+1. Projects with at least one [OVERDUE] task appear before projects that only have [DUE TODAY/MONDAY] tasks
+2. Within each project: [OVERDUE] tasks before [DUE TODAY/MONDAY] tasks
+3. Within each urgency tier: P1 → High → Medium → unlabelled (Low)
+4. Within the same priority: higher effort (≥ 4h) first
+
+- Always include priority in the justification if P1 or High; always include effort if ≥ 4h
+- If the FOCUS ITEMS list is empty, write "Nothing overdue or due — clear start ✅"
 - Leave a blank line between each project block
-- Do NOT include items labelled [AWAITING CLIENT], [BLOCKED], or items with no target date in this section
 
 ━━━━━━━━━━━━━━━━━━━━━
 SECTION 2 — Other
 ━━━━━━━━━━━━━━━━━━━━━
 Header: __📋 **Other**__
 
-For each project with outstanding work NOT already covered in Section 1:
+Format every task from the OTHER ITEMS list, grouped by project.
   🗂 **Project Name**
   • Key task or theme outstanding
-  • Another key task if relevant
   • [AWAITING CLIENT] Task name — awaiting client response
   • [BLOCKED] Task name — blocked
 
-- Group by project — do not create separate entries for the same project
-- Keep bullets concise — one line each
+- Within each project, lead with P1 or High priority tasks if present
+- Keep bullets concise — one line each; mention effort if ≥ 4h and priority if P1 or High
 - Omit projects with nothing notable
 - Leave a blank line between each project block
-- Items labelled [AWAITING CLIENT] or [BLOCKED] must appear here (not in Section 1), noting their status briefly
 
 ━━━━━━━━━━━━━━━━━━━━━
 GLOBAL FORMAT RULES
@@ -73,22 +76,41 @@ function normaliseDate(d: string): string {
 
 type DateLabel = '[OVERDUE]' | '[DUE TODAY/MONDAY]' | '[AWAITING CLIENT]' | '[BLOCKED]' | ''
 
+function isCompletedStatus(s: string | null | undefined): boolean {
+  const t = s?.trim().toLowerCase() ?? ''
+  return t === 'done' || t === 'complete' || t === 'completed'
+}
+
+function subtaskUrgency(subitems: SubItem[], todayStr: string, focusStr: string): DateLabel {
+  let best: DateLabel = ''
+  for (const sub of subitems) {
+    if (!sub.plannedDate || isCompletedStatus(sub.status)) continue
+    const d = normaliseDate(sub.plannedDate)
+    if (d < todayStr) return '[OVERDUE]'
+    if (d === focusStr) best = '[DUE TODAY/MONDAY]'
+  }
+  return best
+}
+
 function dateLabel(item: WorkItem, todayStr: string, focusStr: string): DateLabel {
   const statusLower = item.status?.trim().toLowerCase() ?? ''
 
   // Done items get no label — excluded from both sections
-  if (statusLower === 'done' || statusLower === 'complete' || statusLower === 'completed') return ''
+  if (isCompletedStatus(statusLower)) return ''
 
   // Awaiting client / blocked → routed to Other section by the prompt
   if (statusLower === 'awaiting client' || statusLower === 'awaiting') return '[AWAITING CLIENT]'
   if (statusLower === 'blocked') return '[BLOCKED]'
 
-  // Focus section only applies to items with an explicit target date
-  if (!item.targetDate) return ''
-  const d = normaliseDate(item.targetDate)
-  if (d < todayStr) return '[OVERDUE]'
-  if (d === focusStr) return '[DUE TODAY/MONDAY]'
-  return ''
+  // Task-level target date takes priority
+  if (item.targetDate) {
+    const d = normaliseDate(item.targetDate)
+    if (d < todayStr) return '[OVERDUE]'
+    if (d === focusStr) return '[DUE TODAY/MONDAY]'
+  }
+
+  // Surface the task if any active subtask has a planned date that is overdue or due today
+  return subtaskUrgency(item.subitems, todayStr, focusStr)
 }
 
 function formatItems(items: WorkItem[], todayStr: string, focusStr: string): string {
@@ -105,7 +127,21 @@ function formatItems(items: WorkItem[], todayStr: string, focusStr: string): str
       const suffix = meta.length ? ` (${meta.join(' · ')})` : ''
       const labelPrefix = label ? `${label} ` : ''
       const main = `• ${labelPrefix}[${item.group}] ${item.name}${suffix}`
-      const subs = item.subitems.map((s) => `  ↳ ${s}`).join('\n')
+      const subs = item.subitems
+        .filter((s) => !isCompletedStatus(s.status))
+        .map((s) => {
+          const subMeta: string[] = []
+          if (s.status) subMeta.push(s.status)
+          let subUrgency = ''
+          if (s.plannedDate) {
+            const d = normaliseDate(s.plannedDate)
+            subUrgency = d < todayStr ? '[OVERDUE] ' : d === focusStr ? '[DUE TODAY] ' : ''
+            subMeta.push(`Planned: ${s.plannedDate}`)
+          }
+          const subSuffix = subMeta.length ? ` (${subMeta.join(' · ')})` : ''
+          return `  ↳ ${subUrgency}${s.name}${subSuffix}`
+        })
+        .join('\n')
       return subs ? `${main}\n${subs}` : main
     })
     .join('\n')
@@ -136,13 +172,37 @@ export async function generateBriefing(
     ? projects.map((p, i) => ({ ...p, boardName: `Project ${String.fromCharCode(65 + i)}` }))
     : projects
 
-  const projectText = displayProjects
-    .filter((p) => p.items.length > 0)
-    .map((p) => `**${p.boardName}**\n${formatItems(p.items, todayStr, focusStr)}`)
+  const activeProjects = displayProjects.map((p) => ({
+    ...p,
+    items: p.items.filter((item) => !isCompletedStatus(item.status)),
+  }))
+
+  const focusText = activeProjects
+    .map((p) => {
+      const items = p.items.filter((item) => {
+        const label = dateLabel(item, todayStr, focusStr)
+        return label === '[OVERDUE]' || label === '[DUE TODAY/MONDAY]'
+      })
+      if (!items.length) return null
+      return `**${p.boardName}**\n${formatItems(items, todayStr, focusStr)}`
+    })
+    .filter(Boolean)
+    .join('\n\n')
+
+  const otherText = activeProjects
+    .map((p) => {
+      const items = p.items.filter((item) => {
+        const label = dateLabel(item, todayStr, focusStr)
+        return label !== '[OVERDUE]' && label !== '[DUE TODAY/MONDAY]'
+      })
+      if (!items.length) return null
+      return `**${p.boardName}**\n${formatItems(items, todayStr, focusStr)}`
+    })
+    .filter(Boolean)
     .join('\n\n')
 
   const dayContext = isSunday
-    ? 'Today is Sunday. This is the Monday preparation briefing — the Focus section should cover tasks that are overdue OR due on Monday.'
+    ? 'Today is Sunday. This is the Monday preparation briefing.'
     : 'This is the daily morning briefing.'
 
   const message = await client.messages.create({
@@ -158,7 +218,7 @@ export async function generateBriefing(
     messages: [
       {
         role: 'user',
-        content: `Today is ${today}. ${dayContext}\n\nHere are the active project tasks (items marked [OVERDUE] or [DUE TODAY/MONDAY] are your Section 1 candidates):\n\n${projectText}\n\nPlease generate today's briefing.`,
+        content: `Today is ${today}. ${dayContext}\n\n=== FOCUS ITEMS (overdue or due today — goes in Section 1) ===\n${focusText || '(none)'}\n\n=== OTHER ITEMS (active but not overdue/due today — goes in Section 2) ===\n${otherText || '(none)'}\n\nPlease generate today's briefing.`,
       },
     ],
   })

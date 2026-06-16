@@ -135,6 +135,12 @@ export function parseHours(value: string | null | undefined): number {
   return Number.isFinite(n) ? n : 0
 }
 
+export type SubItem = {
+  name: string
+  plannedDate: string | null
+  status: string | null
+}
+
 export type WorkItem = {
   id: string
   name: string
@@ -145,7 +151,7 @@ export type WorkItem = {
   targetDate: string | null
   plannedDate: string | null
   effort: string | null
-  subitems: string[]
+  subitems: SubItem[]
 }
 
 type RawColumnValue = {
@@ -157,7 +163,7 @@ type RawItem = {
   id: string
   name: string
   column_values: RawColumnValue[]
-  subitems: { id: string; name: string }[]
+  subitems: { id: string; name: string; column_values: RawColumnValue[] }[]
 }
 
 type RawWorkData = {
@@ -180,8 +186,12 @@ function getColText(columnValues: RawColumnValue[], ...keys: string[]): string |
   return null
 }
 
-export async function getBoardWorkItems(boardId: string, boardGroups: Group[]): Promise<WorkItem[]> {
-  const workGroups = boardGroups.filter((g) => isWorkGroup(g.title))
+export async function getBoardWorkItems(
+  boardId: string,
+  boardGroups: Group[],
+  { filterGroups = true }: { filterGroups?: boolean } = {},
+): Promise<WorkItem[]> {
+  const workGroups = filterGroups ? boardGroups.filter((g) => isWorkGroup(g.title)) : boardGroups
   if (workGroups.length === 0) return []
 
   const groupIds = workGroups.map((g) => g.id)
@@ -200,7 +210,14 @@ export async function getBoardWorkItems(boardId: string, boardGroups: Group[]): 
                 text
                 column { title }
               }
-              subitems { id name }
+              subitems {
+                id
+                name
+                column_values {
+                  text
+                  column { title }
+                }
+              }
             }
           }
         }
@@ -226,7 +243,11 @@ export async function getBoardWorkItems(boardId: string, boardGroups: Group[]): 
         targetDate: getColText(cv, 'target date', 'target'),
         plannedDate: getColText(cv, 'planned date', 'planned', 'plan date'),
         effort: getColText(cv, 'effort', 'hours', 'estimated hours'),
-        subitems: raw.subitems.slice(0, 5).map((s) => s.name),
+        subitems: raw.subitems.slice(0, 5).map((s) => ({
+          name: s.name,
+          plannedDate: getColText(s.column_values, 'planned date', 'planned', 'plan date'),
+          status: getColText(s.column_values, 'status'),
+        })),
       })
     }
   }
