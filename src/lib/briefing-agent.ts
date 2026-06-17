@@ -109,6 +109,13 @@ function dateLabel(item: WorkItem, todayStr: string, focusStr: string): DateLabe
     if (d === focusStr) return '[DUE TODAY/MONDAY]'
   }
 
+  // Fall back to planned date when no target date is set
+  if (!item.targetDate && item.plannedDate) {
+    const d = normaliseDate(item.plannedDate)
+    if (d < todayStr) return '[OVERDUE]'
+    if (d === focusStr) return '[DUE TODAY/MONDAY]'
+  }
+
   // Surface the task if any active subtask has a planned date that is overdue or due today
   return subtaskUrgency(item.subitems, todayStr, focusStr)
 }

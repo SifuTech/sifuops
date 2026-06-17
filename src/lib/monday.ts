@@ -243,7 +243,7 @@ export async function getBoardWorkItems(
         targetDate: getColText(cv, 'target date', 'target'),
         plannedDate: getColText(cv, 'planned date', 'planned', 'plan date'),
         effort: getColText(cv, 'effort', 'hours', 'estimated hours'),
-        subitems: raw.subitems.slice(0, 5).map((s) => ({
+        subitems: raw.subitems.map((s) => ({
           name: s.name,
           plannedDate: getColText(s.column_values, 'planned date', 'planned', 'plan date'),
           status: getColText(s.column_values, 'status'),
