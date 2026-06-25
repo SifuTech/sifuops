@@ -9,12 +9,12 @@ export type ProjectWorkData = {
 }
 
 const SYSTEM_PROMPT = `You are a Delivery Manager's daily briefing assistant for a game development studio.
-You receive two pre-split lists: FOCUS ITEMS and OTHER ITEMS. One group may be labelled "BAU" — ongoing operational tasks; treat them the same as any project. Subtasks appear beneath tasks with ↳ and may carry [OVERDUE] or [DUE TODAY] labels with planned dates.
+You receive a list of FOCUS ITEMS — tasks that are overdue or due today/Monday. One group may be labelled "BAU" — ongoing operational tasks; treat them the same as any project. Subtasks appear beneath tasks with ↳ and may carry [OVERDUE] or [DUE TODAY] labels with planned dates.
 
-Produce a Discord briefing in exactly two sections. Use emojis throughout to make the message clear and easy to scan.
+Produce a Discord briefing with a single Focus section. Use emojis throughout to make the message clear and easy to scan.
 
 ━━━━━━━━━━━━━━━━━━━━━
-SECTION 1 — Focus
+SECTION — Focus
 ━━━━━━━━━━━━━━━━━━━━━
 Header (weekday): __🎯 **Focus today:**__
 Header (Sunday):  __🗓️ **Focus Monday:**__
@@ -36,28 +36,11 @@ ORDERING — apply in this exact sequence:
 - Leave a blank line between each project block
 
 ━━━━━━━━━━━━━━━━━━━━━
-SECTION 2 — Other
-━━━━━━━━━━━━━━━━━━━━━
-Header: __📋 **Other**__
-
-Format every task from the OTHER ITEMS list, grouped by project.
-  🗂 **Project Name**
-  • Key task or theme outstanding
-  • [AWAITING CLIENT] Task name — awaiting client response
-  • [BLOCKED] Task name — blocked
-
-- Within each project, lead with P1 or High priority tasks if present
-- Keep bullets concise — one line each; mention effort if ≥ 4h and priority if P1 or High
-- Omit projects with nothing notable
-- Leave a blank line between each project block
-
-━━━━━━━━━━━━━━━━━━━━━
 GLOBAL FORMAT RULES
 ━━━━━━━━━━━━━━━━━━━━━
 - Use Discord markdown (** for bold, • for bullets)
-- Leave a blank line between Section 1 and Section 2
 - No greeting, no sign-off, no overall status sentence
-- Do NOT add emojis at the end of bullet points — only use emojis on section headers (🎯/🗓️/📋) and project headers (📌/🗂)
+- Do NOT add emojis at the end of bullet points — only use emojis on the section header (🎯/🗓️) and project headers (📌)
 - Keep the entire response under 1900 characters`
 
 function todayUTCStr(): string {
@@ -196,18 +179,6 @@ export async function generateBriefing(
     .filter(Boolean)
     .join('\n\n')
 
-  const otherText = activeProjects
-    .map((p) => {
-      const items = p.items.filter((item) => {
-        const label = dateLabel(item, todayStr, focusStr)
-        return label !== '[OVERDUE]' && label !== '[DUE TODAY/MONDAY]'
-      })
-      if (!items.length) return null
-      return `**${p.boardName}**\n${formatItems(items, todayStr, focusStr)}`
-    })
-    .filter(Boolean)
-    .join('\n\n')
-
   const dayContext = isSunday
     ? 'Today is Sunday. This is the Monday preparation briefing.'
     : 'This is the daily morning briefing.'
@@ -225,7 +196,7 @@ export async function generateBriefing(
     messages: [
       {
         role: 'user',
-        content: `Today is ${today}. ${dayContext}\n\n=== FOCUS ITEMS (overdue or due today — goes in Section 1) ===\n${focusText || '(none)'}\n\n=== OTHER ITEMS (active but not overdue/due today — goes in Section 2) ===\n${otherText || '(none)'}\n\nPlease generate today's briefing.`,
+        content: `Today is ${today}. ${dayContext}\n\n=== FOCUS ITEMS (overdue or due today) ===\n${focusText || '(none)'}\n\nPlease generate today's briefing.`,
       },
     ],
   })
